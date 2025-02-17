@@ -2,7 +2,7 @@ export const colors = {
   primary: '#ff4500', // Main orange-red color
   primaryLight: '#ff6933', // Lighter shade for hover/active states
   primaryDark: '#cc3700', // Darker shade for pressed states
-  success: '#ff4500', // Use primary color for success/confirmation
+  success: '#4CAF50', // Change this to proper green color instead of using primary
   background: '#ffffff',
   surface: '#f8f8f8',
   text: '#333333',

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView, Alert } from 'react-native';
+import { StyleSheet, View, ScrollView, Alert, TouchableOpacity, Text } from 'react-native';
 import { Button, Input, Icon, Avatar } from '@rneui/themed';
 import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, typography } from '../../styles/theme';
@@ -86,63 +86,84 @@ export default function EditProfileScreen({ navigation }) {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.avatarContainer}>
-        <Avatar
-          size={120}
-          rounded
-          source={formData.avatar_url ? { uri: formData.avatar_url } : undefined}
-          icon={!formData.avatar_url ? { name: 'person', type: 'material' } : undefined}
-          containerStyle={styles.avatar}
-        >
-          <Avatar.Accessory
-            size={36}
+    <View style={styles.container}>
+      <View style={styles.headerBackground} />
+      <TouchableOpacity style={styles.backButtonContainer} onPress={() => navigation.goBack()}>
+        <View style={styles.backButtonCircle}>
+          <Icon name="arrow-back" size={24} color={colors.primary} />
+        </View>
+      </TouchableOpacity>
+      
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.avatarContainer}>
+          <TouchableOpacity 
+            style={styles.avatarWrapper} 
             onPress={handleImagePick}
             disabled={loading}
+          >
+            <Avatar
+              size={120}
+              rounded
+              source={formData.avatar_url ? { uri: formData.avatar_url } : undefined}
+              icon={!formData.avatar_url ? { name: 'person', type: 'material' } : undefined}
+              containerStyle={styles.avatar}
+            >
+              <Avatar.Accessory 
+                size={36} 
+                style={styles.avatarAccessory}
+              />
+            </Avatar>
+            <Text style={styles.changePhotoText}>Change Photo</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.formContainer}>
+          <Text style={styles.sectionTitle}>Personal Information</Text>
+          <Input
+            label="First Name"
+            value={formData.first_name}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, first_name: text }))}
+            containerStyle={styles.inputContainer}
+            inputContainerStyle={styles.input}
+            labelStyle={styles.inputLabel}
+            autoCapitalize="words"
+            placeholder="Enter your first name"
           />
-        </Avatar>
-      </View>
 
-      <View style={styles.form}>
-        <Input
-          placeholder="First Name"
-          value={formData.first_name}
-          onChangeText={(text) => setFormData(prev => ({ ...prev, first_name: text }))}
-          leftIcon={<Icon name="person" color={colors.primary} size={20} />}
-          containerStyle={styles.inputContainer}
-          inputContainerStyle={styles.input}
-          autoCapitalize="words"
-        />
+          <Input
+            label="Last Name"
+            value={formData.last_name}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, last_name: text }))}
+            containerStyle={styles.inputContainer}
+            inputContainerStyle={styles.input}
+            labelStyle={styles.inputLabel}
+            autoCapitalize="words"
+            placeholder="Enter your last name"
+          />
 
-        <Input
-          placeholder="Last Name"
-          value={formData.last_name}
-          onChangeText={(text) => setFormData(prev => ({ ...prev, last_name: text }))}
-          leftIcon={<Icon name="person" color={colors.primary} size={20} />}
-          containerStyle={styles.inputContainer}
-          inputContainerStyle={styles.input}
-          autoCapitalize="words"
-        />
-
-        <Input
-          placeholder="Email"
-          value={formData.email}
-          disabled
-          leftIcon={<Icon name="email" color={colors.textLight} size={20} />}
-          containerStyle={styles.inputContainer}
-          inputContainerStyle={[styles.input, styles.disabledInput]}
-          inputStyle={styles.disabledText}
-        />
+          <Input
+            label="Email"
+            value={formData.email}
+            disabled
+            containerStyle={styles.inputContainer}
+            inputContainerStyle={[styles.input, styles.disabledInput]}
+            labelStyle={styles.inputLabel}
+            inputStyle={styles.disabledText}
+            rightIcon={<Icon name="lock" size={20} color={colors.textLight} />}
+          />
+        </View>
 
         <Button
           title="Save Changes"
           onPress={handleSave}
           loading={loading}
           buttonStyle={styles.saveButton}
-          containerStyle={styles.buttonContainer}
+          containerStyle={styles.saveButtonContainer}
+          titleStyle={styles.saveButtonText}
+          loadingProps={{ color: colors.white }}
         />
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -151,43 +172,116 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  headerBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 200,
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  backButtonContainer: {
+    position: 'absolute',
+    top: spacing.xl + spacing.xs,
+    left: spacing.md,
+    zIndex: 1,
+  },
+  backButtonCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  content: {
+    paddingTop: spacing.xl * 2,
+    paddingHorizontal: spacing.lg,
+    flexGrow: 1,
+  },
   avatarContainer: {
     alignItems: 'center',
-    padding: spacing.xl,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    marginTop: spacing.xl,
+    marginBottom: spacing.lg,
+  },
+  avatarWrapper: {
+    alignItems: 'center',
   },
   avatar: {
-    borderWidth: 3,
-    borderColor: colors.primary,
+    borderWidth: 4,
+    borderColor: colors.black,
   },
-  form: {
+  avatarAccessory: {
+    backgroundColor: colors.primary,
+    borderColor: colors.black,
+  },
+  changePhotoText: {
+    ...typography.body,
+    color: colors.black,
+    marginTop: spacing.sm,
+    fontWeight: '500',
+  },
+  formContainer: {
+    marginTop: spacing.md,
+    backgroundColor: colors.white,
+    borderRadius: 16,
     padding: spacing.lg,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  sectionTitle: {
+    ...typography.h3,
+    color: colors.text,
+    marginBottom: spacing.lg,
   },
   inputContainer: {
     paddingHorizontal: 0,
     marginBottom: spacing.md,
+  },
+  inputLabel: {
+    ...typography.caption,
+    color: colors.textLight,
+    marginBottom: spacing.xs,
   },
   input: {
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 8,
     paddingHorizontal: spacing.md,
+    height: 48,
+    backgroundColor: colors.surface,
   },
   disabledInput: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
+    opacity: 0.7,
   },
   disabledText: {
     color: colors.textLight,
   },
   saveButton: {
     backgroundColor: colors.primary,
-    borderRadius: 8,
+    borderRadius: 12,
     paddingVertical: spacing.md,
+    height: 56,
   },
-  buttonContainer: {
+  saveButtonText: {
+    ...typography.button,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  saveButtonContainer: {
     marginTop: spacing.xl,
+    marginBottom: spacing.xl,
   },
 }); 

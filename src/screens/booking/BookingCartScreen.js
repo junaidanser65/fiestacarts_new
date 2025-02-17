@@ -7,6 +7,9 @@ import { useBooking } from '../../contexts/BookingContext';
 export default function BookingCartScreen({ navigation }) {
   const { bookings, removeBooking, clearBookings } = useBooking();
 
+  // Filter out paid bookings
+  const unpaidBookings = bookings.filter(booking => booking.status !== 'paid');
+
   const formatDate = (date) => {
     if (!date) return '';
     const dateObj = new Date(date);
@@ -65,7 +68,7 @@ export default function BookingCartScreen({ navigation }) {
 
   const handleCheckout = () => {
     // Convert Date objects to strings before navigation, with safety checks
-    const serializedBookings = bookings.map(booking => ({
+    const serializedBookings = unpaidBookings.map(booking => ({
       ...booking,
       time: booking.time ? 
         (typeof booking.time === 'string' ? booking.time : booking.time.toISOString()) 
@@ -82,7 +85,7 @@ export default function BookingCartScreen({ navigation }) {
     navigation.navigate('Payment', { bookings: serializedBookings });
   };
 
-  if (bookings.length === 0) {
+  if (unpaidBookings.length === 0) {
     return (
       <View style={styles.emptyContainer}>
         <Icon name="shopping-cart" size={64} color={colors.textLight} />
@@ -100,7 +103,7 @@ export default function BookingCartScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {bookings.map((booking) => (
+        {unpaidBookings.map((booking) => (
           <Card key={booking.id} containerStyle={styles.bookingCard}>
             {/* Vendor Info */}
             <View style={styles.bookingHeader}>
@@ -114,6 +117,17 @@ export default function BookingCartScreen({ navigation }) {
                 onPress={() => handleRemoveBooking(booking.id)}
                 containerStyle={styles.removeButton}
               />
+            </View>
+
+            {/* Status Badge */}
+            <View style={styles.statusContainer}>
+              <Text style={[
+                styles.statusText,
+                booking.status === 'pending_payment' && styles.pendingStatus,
+                booking.status === 'paid' && styles.paidStatus
+              ]}>
+                {booking.status === 'pending_payment' ? 'PENDING PAYMENT' : booking.status.toUpperCase()}
+              </Text>
             </View>
 
             {/* Booking Details */}
@@ -180,7 +194,7 @@ export default function BookingCartScreen({ navigation }) {
           type="outline"
         />
         <Button
-          title={`Checkout (${bookings.length})`}
+          title={`Checkout (${unpaidBookings.length})`}
           onPress={handleCheckout}
           buttonStyle={styles.checkoutButton}
           containerStyle={styles.checkoutButtonContainer}
@@ -354,5 +368,20 @@ const styles = StyleSheet.create({
   },
   browseButtonContainer: {
     width: '80%',
+  },
+  statusContainer: {
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  statusText: {
+    ...typography.caption,
+    fontWeight: 'bold',
+    textAlign: 'right',
+  },
+  pendingStatus: {
+    color: colors.textLight,
+  },
+  paidStatus: {
+    color: colors.success,
   },
 }); 

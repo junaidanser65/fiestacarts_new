@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, ScrollView, TouchableOpacity } from 'react-nati
 import { Button, Card, Icon } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
 import { useBooking } from '../../contexts/BookingContext';
+import BackButton from '../../components/common/BackButton';
 
 // Mock data - replace with API call later
 const MOCK_BOOKINGS = [
@@ -48,8 +49,15 @@ export default function BookingHistoryScreen({ route, navigation }) {
   const { bookings } = useBooking();
 
   useEffect(() => {
+    // Set initial tab when screen mounts or route params change
     if (route.params?.initialTab) {
       setActiveTab(route.params.initialTab);
+    }
+    
+    // If coming from payment, scroll to top and focus on the booking
+    if (route.params?.fromPayment) {
+      // Any additional logic you want to add when coming from payment
+      // Like scrolling to top or highlighting the new booking
     }
   }, [route.params]);
 
@@ -96,23 +104,27 @@ export default function BookingHistoryScreen({ route, navigation }) {
     switch (status) {
       case 'paid':
         return {
-          badge: styles.paidBadge,
-          text: { ...styles.statusText, color: colors.success }
+          container: styles.statusBadge,
+          style: styles.paidBadge,
+          textStyle: styles.paidText
         };
       case 'confirmed':
         return {
-          badge: styles.confirmedBadge,
-          text: { ...styles.statusText, color: colors.primary }
+          container: styles.statusBadge,
+          style: styles.confirmedBadge,
+          textStyle: styles.confirmedText
         };
       case 'completed':
         return {
-          badge: styles.completedBadge,
-          text: { ...styles.statusText, color: colors.textLight }
+          container: styles.statusBadge,
+          style: styles.completedBadge,
+          textStyle: styles.completedText
         };
       default:
         return {
-          badge: styles.defaultBadge,
-          text: styles.statusText
+          container: styles.statusBadge,
+          style: styles.defaultBadge,
+          textStyle: styles.defaultText
         };
     }
   };
@@ -124,8 +136,11 @@ export default function BookingHistoryScreen({ route, navigation }) {
           <Text style={styles.vendorName}>{booking.vendor.name}</Text>
           <Text style={styles.vendorCategory}>{booking.vendor.category}</Text>
         </View>
-        <View style={[styles.statusBadge, getStatusBadgeStyle(booking.status).badge]}>
-          <Text style={getStatusBadgeStyle(booking.status).text}>
+        <View style={[
+          getStatusBadgeStyle(booking.status).container,
+          getStatusBadgeStyle(booking.status).style
+        ]}>
+          <Text style={getStatusBadgeStyle(booking.status).textStyle}>
             {booking.status.toUpperCase()}
           </Text>
         </View>
@@ -184,41 +199,51 @@ export default function BookingHistoryScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'upcoming' && styles.activeTab]}
-          onPress={() => setActiveTab('upcoming')}
-        >
-          <Text style={[styles.tabText, activeTab === 'upcoming' && styles.activeTabText]}>
-            Upcoming
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'past' && styles.activeTab]}
-          onPress={() => setActiveTab('past')}
-        >
-          <Text style={[styles.tabText, activeTab === 'past' && styles.activeTabText]}>
-            Past
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView style={styles.content}>
-        {getFilteredBookings().length > 0 ? (
-          getFilteredBookings().map(renderBookingCard)
-        ) : (
-          <View style={styles.emptyState}>
-            <Icon 
-              name={activeTab === 'upcoming' ? 'event-busy' : 'history'} 
-              size={64} 
-              color={colors.textLight} 
-            />
-            <Text style={styles.emptyStateText}>
-              No {activeTab} bookings found
-            </Text>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <View style={styles.backButtonCircle}>
+            <Icon name="arrow-back" size={24} color={colors.primary} />
           </View>
-        )}
-      </ScrollView>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Booking History</Text>
+      </View>
+      <View style={styles.content}>
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'upcoming' && styles.activeTab]}
+            onPress={() => setActiveTab('upcoming')}
+          >
+            <Text style={[styles.tabText, activeTab === 'upcoming' && styles.activeTabText]}>
+              Upcoming
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'past' && styles.activeTab]}
+            onPress={() => setActiveTab('past')}
+          >
+            <Text style={[styles.tabText, activeTab === 'past' && styles.activeTabText]}>
+              Past
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.content}>
+          {getFilteredBookings().length > 0 ? (
+            getFilteredBookings().map(renderBookingCard)
+          ) : (
+            <View style={styles.emptyState}>
+              <Icon 
+                name={activeTab === 'upcoming' ? 'event-busy' : 'history'} 
+                size={64} 
+                color={colors.textLight} 
+              />
+              <Text style={styles.emptyStateText}>
+                No {activeTab} bookings found
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+      </View>
     </View>
   );
 }
@@ -227,6 +252,39 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: spacing.xl + spacing.xs,
+    paddingBottom: spacing.md,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  backButton: {
+    marginRight: spacing.md,
+  },
+  backButtonCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  headerTitle: {
+    ...typography.h2,
+    flex: 1,
+  },
+  content: {
+    flex: 1,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -284,19 +342,34 @@ const styles = StyleSheet.create({
   paidBadge: {
     backgroundColor: colors.success + '20',
   },
+  paidText: {
+    ...typography.caption,
+    fontWeight: 'bold',
+    color: colors.success,
+  },
   confirmedBadge: {
     backgroundColor: colors.primary + '20',
+  },
+  confirmedText: {
+    ...typography.caption,
+    fontWeight: 'bold',
+    color: colors.primary,
   },
   completedBadge: {
     backgroundColor: colors.textLight + '20',
   },
+  completedText: {
+    ...typography.caption,
+    fontWeight: 'bold',
+    color: colors.textLight,
+  },
   defaultBadge: {
     backgroundColor: colors.surface,
   },
-  statusText: {
+  defaultText: {
     ...typography.caption,
     fontWeight: 'bold',
-    color: colors.primary,
+    color: colors.textLight,
   },
   dateTimeContainer: {
     flexDirection: 'row',

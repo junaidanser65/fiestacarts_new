@@ -6,6 +6,7 @@ import { BookingProvider } from './src/contexts/BookingContext';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { ActionSheetProvider } from '@expo/react-native-action-sheet';
 import { colors } from './src/styles/theme';
+import { FavoritesProvider } from './src/contexts/FavoritesContext';
 
 export default function App() {
   return (
@@ -14,7 +15,9 @@ export default function App() {
       <AuthProvider>
         <BookingProvider>
           <ActionSheetProvider>
-            <AppNavigator />
+            <FavoritesProvider>
+              <AppNavigator />
+            </FavoritesProvider>
           </ActionSheetProvider>
         </BookingProvider>
       </AuthProvider>

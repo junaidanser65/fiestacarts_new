@@ -3,18 +3,22 @@ import { StyleSheet, View, Text, ScrollView } from 'react-native';
 import { Button, Card, Icon } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
 import { useBooking } from '../../contexts/BookingContext';
+import BackButton from '../../components/common/BackButton';
 
 export default function PaymentSuccessScreen({ route, navigation }) {
   const { amount, bookings } = route.params;
-  const { clearBookings, addBooking } = useBooking();
+  const { updateBooking } = useBooking();
 
   useEffect(() => {
-    // Save paid bookings to context
+    // Update the status of each booking to 'paid'
     bookings.forEach(booking => {
-      addBooking(booking);
+      const paidBooking = {
+        ...booking,
+        status: 'paid',
+        paymentDate: new Date().toISOString()
+      };
+      updateBooking(paidBooking);
     });
-    // Clear the cart
-    clearBookings();
   }, []);
 
   const formatDate = (dateString) => {
@@ -36,6 +40,7 @@ export default function PaymentSuccessScreen({ route, navigation }) {
   };
 
   const handleViewBookings = () => {
+    // First reset to MainApp with Profile tab active
     navigation.reset({
       index: 0,
       routes: [
@@ -46,56 +51,71 @@ export default function PaymentSuccessScreen({ route, navigation }) {
             routes: [
               { name: 'Dashboard' },
               { name: 'Bookings' },
-              {
-                name: 'Profile'
-              }
+              { name: 'Profile' }
             ]
           }
         }
       ]
     });
 
-    // After resetting to Profile tab, navigate to BookingHistory
+    // Then navigate to BookingHistory after a short delay
     setTimeout(() => {
-      navigation.navigate('BookingHistory', { initialTab: 'upcoming' });
-    }, 100);
-  };
-
-  const handleBackToHome = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'MainApp' }],
-    });
+      navigation.navigate('BookingHistory', { 
+        initialTab: 'upcoming',
+        fromPayment: true
+      });
+    }, 300);
   };
 
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Icon
-          name="check-circle"
-          color={colors.primary}
-          size={80}
-          style={styles.icon}
-        />
-        <Text style={styles.title}>Payment Successful!</Text>
-        <Text style={styles.subtitle}>
-          Total Amount Paid: ${amount.toLocaleString()}
-        </Text>
+        <View style={styles.successIconContainer}>
+          <Icon
+            name="check-circle"
+            color={colors.success}
+            size={100}
+            style={styles.icon}
+          />
+        </View>
+
+        <View style={styles.headerContainer}>
+          <Text style={styles.title}>Payment Successful!</Text>
+          <Text style={styles.subtitle}>
+            Total Amount Paid: ${amount.toLocaleString()}
+          </Text>
+        </View>
 
         <View style={styles.summaryContainer}>
           <Text style={styles.sectionTitle}>Booking Summary</Text>
           {bookings.map((booking) => (
             <Card key={booking.id} containerStyle={styles.bookingCard}>
               <Text style={styles.vendorName}>{booking.vendor.name}</Text>
-              <Text style={styles.serviceInfo}>
-                {booking.selectedServices.map(service => service.name).join(', ')}
-              </Text>
-              <Text style={styles.dateInfo}>
-                {formatDate(booking.selectedDate)} at {formatTime(booking.time)}
-              </Text>
-              <Text style={styles.guestInfo}>
-                {booking.guests} guests
-              </Text>
+              <View style={styles.detailsContainer}>
+                <Icon name="event" size={16} color={colors.textLight} />
+                <Text style={styles.detailText}>
+                  {formatDate(booking.selectedDate)}
+                </Text>
+              </View>
+              <View style={styles.detailsContainer}>
+                <Icon name="access-time" size={16} color={colors.textLight} />
+                <Text style={styles.detailText}>
+                  {formatTime(booking.time)}
+                </Text>
+              </View>
+              <View style={styles.detailsContainer}>
+                <Icon name="people" size={16} color={colors.textLight} />
+                <Text style={styles.detailText}>
+                  {booking.guests} guests
+                </Text>
+              </View>
+              <View style={styles.servicesContainer}>
+                {booking.selectedServices.map(service => (
+                  <Text key={service.id} style={styles.serviceText}>
+                    • {service.name}
+                  </Text>
+                ))}
+              </View>
             </Card>
           ))}
         </View>
@@ -109,7 +129,10 @@ export default function PaymentSuccessScreen({ route, navigation }) {
           />
           <Button
             title="Back to Home"
-            onPress={handleBackToHome}
+            onPress={() => navigation.reset({
+              index: 0,
+              routes: [{ name: 'MainApp' }],
+            })}
             buttonStyle={styles.homeButton}
             containerStyle={styles.buttonWrapper}
             type="outline"
@@ -125,11 +148,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  backButtonContainer: {
+    position: 'absolute',
+    top: spacing.xl + spacing.xs, // Add extra spacing for status bar
+    left: 0,
+    zIndex: 1, // Ensure button stays on top
+  },
   content: {
     padding: spacing.xl,
     alignItems: 'center',
   },
-  icon: {
+  successIconContainer: {
+    alignItems: 'center',
+    marginVertical: spacing.xl,
+  },
+  headerContainer: {
+    alignItems: 'center',
     marginBottom: spacing.xl,
   },
   title: {
@@ -140,8 +174,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     ...typography.h2,
-    color: colors.primary,
-    marginBottom: spacing.xl,
+    color: colors.success,
     textAlign: 'center',
   },
   summaryContainer: {
@@ -153,27 +186,35 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   bookingCard: {
-    borderRadius: 8,
+    borderRadius: 12,
     marginBottom: spacing.md,
     padding: spacing.md,
+    elevation: 2,
   },
   vendorName: {
     ...typography.h3,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.md,
   },
-  serviceInfo: {
+  detailsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  detailText: {
+    ...typography.body,
+    color: colors.textLight,
+    marginLeft: spacing.sm,
+  },
+  servicesContainer: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  serviceText: {
     ...typography.body,
     color: colors.textLight,
     marginBottom: spacing.xs,
-  },
-  dateInfo: {
-    ...typography.body,
-    color: colors.textLight,
-    marginBottom: spacing.xs,
-  },
-  guestInfo: {
-    ...typography.body,
-    color: colors.textLight,
   },
   buttonContainer: {
     width: '100%',
@@ -190,5 +231,8 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     paddingVertical: spacing.md,
     borderRadius: 8,
+  },
+  icon: {
+    marginBottom: spacing.md,
   },
 }); 

@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Card, Icon, Button, Divider } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
+import BackButton from '../../components/common/BackButton';
 
 export default function BookingDetailsScreen({ route, navigation }) {
   const { booking } = route.params;
@@ -41,114 +42,120 @@ export default function BookingDetailsScreen({ route, navigation }) {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Booking Status */}
-      <View style={styles.statusContainer}>
-        <View style={styles.statusHeader}>
-          <Text style={styles.statusTitle}>Booking Status</Text>
-          <View style={[
-            styles.statusBadge,
-            booking.status === 'upcoming' ? styles.upcomingBadge : styles.completedBadge
-          ]}>
-            <Text style={styles.statusText}>
-              {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <BackButton/>
+        <Text style={styles.headerTitle}>Booking Details</Text>
+      </View>
+      <ScrollView>
+        {/* Booking Status */}
+        <View style={styles.statusContainer}>
+          <View style={styles.statusHeader}>
+            <Text style={styles.statusTitle}>Booking Status</Text>
+            <View style={[
+              styles.statusBadge,
+              booking.status === 'upcoming' ? styles.upcomingBadge : styles.completedBadge
+            ]}>
+              <Text style={styles.statusText}>
+                {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.bookingId}>Booking ID: #{booking.id}</Text>
+        </View>
+
+        {/* Vendor Details */}
+        <Card containerStyle={styles.card}>
+          <Card.Image source={{ uri: booking.vendor.image }} style={styles.vendorImage} />
+          <View style={styles.vendorInfo}>
+            <Text style={styles.vendorName}>{booking.vendor.name}</Text>
+            <Text style={styles.vendorCategory}>{booking.vendor.category}</Text>
+            <TouchableOpacity 
+              style={styles.contactButton}
+              onPress={handleContactVendor}
+            >
+              <Icon name="chat" color={colors.primary} size={20} />
+              <Text style={styles.contactButtonText}>Contact Vendor</Text>
+            </TouchableOpacity>
+          </View>
+        </Card>
+
+        {/* Booking Details */}
+        <Card containerStyle={styles.card}>
+          <Text style={styles.sectionTitle}>Booking Details</Text>
+          <View style={styles.detailRow}>
+            <Icon name="event" color={colors.textLight} size={20} />
+            <Text style={styles.detailLabel}>Date:</Text>
+            <Text style={styles.detailText}>
+              {booking.date.toLocaleDateString()}
             </Text>
           </View>
-        </View>
-        <Text style={styles.bookingId}>Booking ID: #{booking.id}</Text>
-      </View>
+          <View style={styles.detailRow}>
+            <Icon name="access-time" color={colors.textLight} size={20} />
+            <Text style={styles.detailLabel}>Time:</Text>
+            <Text style={styles.detailText}>
+              {booking.time.toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              })}
+            </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Icon name="people" color={colors.textLight} size={20} />
+            <Text style={styles.detailLabel}>Guests:</Text>
+            <Text style={styles.detailText}>{booking.guests}</Text>
+          </View>
+          <Divider style={styles.divider} />
+          <View style={styles.serviceInfo}>
+            <Text style={styles.serviceTitle}>{booking.service.name}</Text>
+            <Text style={styles.servicePrice}>{booking.service.price}</Text>
+          </View>
+          {booking.notes && (
+            <View style={styles.notesContainer}>
+              <Text style={styles.notesLabel}>Special Requests:</Text>
+              <Text style={styles.notesText}>{booking.notes}</Text>
+            </View>
+          )}
+        </Card>
 
-      {/* Vendor Details */}
-      <Card containerStyle={styles.card}>
-        <Card.Image source={{ uri: booking.vendor.image }} style={styles.vendorImage} />
-        <View style={styles.vendorInfo}>
-          <Text style={styles.vendorName}>{booking.vendor.name}</Text>
-          <Text style={styles.vendorCategory}>{booking.vendor.category}</Text>
-          <TouchableOpacity 
-            style={styles.contactButton}
-            onPress={handleContactVendor}
-          >
-            <Icon name="chat" color={colors.primary} size={20} />
-            <Text style={styles.contactButtonText}>Contact Vendor</Text>
-          </TouchableOpacity>
-        </View>
-      </Card>
+        {/* Payment Summary */}
+        <Card containerStyle={styles.card}>
+          <Text style={styles.sectionTitle}>Payment Summary</Text>
+          <View style={styles.paymentRow}>
+            <Text style={styles.paymentLabel}>Service Cost</Text>
+            <Text style={styles.paymentAmount}>${booking.totalAmount}</Text>
+          </View>
+          <View style={styles.paymentRow}>
+            <Text style={styles.paymentLabel}>Taxes & Fees</Text>
+            <Text style={styles.paymentAmount}>$0</Text>
+          </View>
+          <Divider style={styles.divider} />
+          <View style={styles.paymentRow}>
+            <Text style={styles.totalLabel}>Total Paid</Text>
+            <Text style={styles.totalAmount}>${booking.totalAmount}</Text>
+          </View>
+        </Card>
 
-      {/* Booking Details */}
-      <Card containerStyle={styles.card}>
-        <Text style={styles.sectionTitle}>Booking Details</Text>
-        <View style={styles.detailRow}>
-          <Icon name="event" color={colors.textLight} size={20} />
-          <Text style={styles.detailLabel}>Date:</Text>
-          <Text style={styles.detailText}>
-            {booking.date.toLocaleDateString()}
-          </Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Icon name="access-time" color={colors.textLight} size={20} />
-          <Text style={styles.detailLabel}>Time:</Text>
-          <Text style={styles.detailText}>
-            {booking.time.toLocaleTimeString([], { 
-              hour: '2-digit', 
-              minute: '2-digit' 
-            })}
-          </Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Icon name="people" color={colors.textLight} size={20} />
-          <Text style={styles.detailLabel}>Guests:</Text>
-          <Text style={styles.detailText}>{booking.guests}</Text>
-        </View>
-        <Divider style={styles.divider} />
-        <View style={styles.serviceInfo}>
-          <Text style={styles.serviceTitle}>{booking.service.name}</Text>
-          <Text style={styles.servicePrice}>{booking.service.price}</Text>
-        </View>
-        {booking.notes && (
-          <View style={styles.notesContainer}>
-            <Text style={styles.notesLabel}>Special Requests:</Text>
-            <Text style={styles.notesText}>{booking.notes}</Text>
+        {/* Action Buttons */}
+        {booking.status === 'upcoming' && (
+          <View style={styles.actionButtons}>
+            <Button
+              title="Modify Booking"
+              onPress={handleModifyBooking}
+              buttonStyle={styles.modifyButton}
+              containerStyle={styles.buttonContainer}
+            />
+            <Button
+              title="Cancel Booking"
+              onPress={handleCancelBooking}
+              buttonStyle={styles.cancelButton}
+              containerStyle={styles.buttonContainer}
+              type="outline"
+            />
           </View>
         )}
-      </Card>
-
-      {/* Payment Summary */}
-      <Card containerStyle={styles.card}>
-        <Text style={styles.sectionTitle}>Payment Summary</Text>
-        <View style={styles.paymentRow}>
-          <Text style={styles.paymentLabel}>Service Cost</Text>
-          <Text style={styles.paymentAmount}>${booking.totalAmount}</Text>
-        </View>
-        <View style={styles.paymentRow}>
-          <Text style={styles.paymentLabel}>Taxes & Fees</Text>
-          <Text style={styles.paymentAmount}>$0</Text>
-        </View>
-        <Divider style={styles.divider} />
-        <View style={styles.paymentRow}>
-          <Text style={styles.totalLabel}>Total Paid</Text>
-          <Text style={styles.totalAmount}>${booking.totalAmount}</Text>
-        </View>
-      </Card>
-
-      {/* Action Buttons */}
-      {booking.status === 'upcoming' && (
-        <View style={styles.actionButtons}>
-          <Button
-            title="Modify Booking"
-            onPress={handleModifyBooking}
-            buttonStyle={styles.modifyButton}
-            containerStyle={styles.buttonContainer}
-          />
-          <Button
-            title="Cancel Booking"
-            onPress={handleCancelBooking}
-            buttonStyle={styles.cancelButton}
-            containerStyle={styles.buttonContainer}
-            type="outline"
-          />
-        </View>
-      )}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -156,6 +163,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  headerTitle: {
+    ...typography.h2,
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 48,
   },
   statusContainer: {
     padding: spacing.lg,

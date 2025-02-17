@@ -40,6 +40,142 @@ import EditReviewScreen from '../screens/vendor/EditReviewScreen';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
+// Create a stack navigator for each tab
+const DashboardStack = () => (
+  <Stack.Navigator 
+    screenOptions={{ 
+      headerShown: false,
+    }}
+  >
+    <Stack.Screen name="DashboardMain" component={MainDashboardScreen} />
+    <Stack.Screen name="VendorDetails" component={VendorDetailsScreen} />
+    <Stack.Screen name="FullMap" component={FullMapScreen} />
+    <Stack.Screen name="BookingForm" component={BookingFormScreen} />
+  </Stack.Navigator>
+);
+
+const BookingsStack = () => (
+  <Stack.Navigator 
+    screenOptions={{ 
+      headerShown: false,
+    }}
+  >
+    <Stack.Screen name="BookingsMain" component={BookingCartScreen} />
+    <Stack.Screen name="Payment" component={PaymentScreen} />
+    <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
+  </Stack.Navigator>
+);
+
+const ProfileStack = () => (
+  <Stack.Navigator 
+    screenOptions={{ 
+      headerShown: false,
+    }}
+  >
+    <Stack.Screen name="ProfileMain" component={ProfileScreen} />
+    <Stack.Screen name="BookingHistory" component={BookingHistoryScreen} />
+    <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+    <Stack.Screen name="Settings" component={SettingsScreen} />
+    <Stack.Screen
+      name="PaymentMethods"
+      component={PaymentMethodsScreen}
+      options={{
+        headerShown: true,
+        headerTitle: 'Payment Methods',
+        headerBackTitle: 'Back',
+      }}
+    />
+    <Stack.Screen
+      name="Notifications"
+      component={NotificationsScreen}
+      options={{
+        headerShown: true,
+        headerTitle: 'Notifications',
+        headerBackTitle: 'Back',
+      }}
+    />
+    <Stack.Screen
+      name="Privacy"
+      component={PrivacyPolicyScreen}
+      options={{
+        headerShown: true,
+        headerTitle: 'Privacy Policy',
+        headerBackTitle: 'Back',
+      }}
+    />
+    <Stack.Screen
+      name="Terms"
+      component={TermsScreen}
+      options={{
+        headerShown: true,
+        headerTitle: 'Terms of Service',
+        headerBackTitle: 'Back',
+      }}
+    />
+    <Stack.Screen
+      name="Support"
+      component={SupportScreen}
+      options={{
+        headerShown: true,
+        headerTitle: 'Help & Support',
+        headerBackTitle: 'Back',
+      }}
+    />
+    <Stack.Screen
+      name="About"
+      component={AboutScreen}
+      options={{
+        headerShown: true,
+        headerTitle: 'About',
+        headerBackTitle: 'Back',
+      }}
+    />
+    <Stack.Screen
+      name="SavedVendors"
+      component={SavedVendorsScreen}
+      options={{
+        headerShown: true,
+        headerTitle: 'Saved Vendors',
+        headerBackTitle: 'Back',
+      }}
+    />
+    <Stack.Screen
+      name="SearchFilters"
+      component={SearchFiltersScreen}
+      options={{
+        headerShown: true,
+        headerTitle: 'Search Filters',
+        headerBackTitle: 'Back',
+      }}
+    />
+    <Stack.Screen
+      name="VendorSearch"
+      component={VendorSearchScreen}
+      options={{
+        headerShown: true,
+        headerTitle: 'Search Vendors',
+        headerBackTitle: 'Back',
+      }}
+    />
+    <Stack.Screen
+      name="AddReview"
+      component={AddReviewScreen}
+      options={{
+        headerTitle: 'Add Review',
+        headerBackTitle: 'Back',
+      }}
+    />
+    <Stack.Screen
+      name="EditReview"
+      component={EditReviewScreen}
+      options={{
+        headerTitle: 'Edit Review',
+        headerBackTitle: 'Back',
+      }}
+    />
+  </Stack.Navigator>
+);
+
 const MainTabs = () => {
   return (
     <Tab.Navigator
@@ -65,12 +201,9 @@ const MainTabs = () => {
         headerShown: false,
       })}
     >
-      <Tab.Screen 
-        name="Dashboard" 
-        component={MainDashboardScreen}
-      />
-      <Tab.Screen name="Bookings" component={BookingCartScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Dashboard" component={DashboardStack} />
+      <Tab.Screen name="Bookings" component={BookingsStack} />
+      <Tab.Screen name="Profile" component={ProfileStack} />
     </Tab.Navigator>
   );
 };
@@ -106,190 +239,13 @@ export default function AppNavigator() {
             <Stack.Screen name="Welcome" component={WelcomeScreen} />
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Signup" component={SignupScreen} />
-            <Stack.Screen 
-              name="EmailVerification" 
-              component={EmailVerificationScreen}
-              options={{
-                gestureEnabled: false,
-              }}
-            />
+            <Stack.Screen name="EmailVerification" component={EmailVerificationScreen} />
             <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
             <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
           </>
         ) : (
-          // Main App Stack
-          <>
-            <Stack.Screen name="MainApp" component={MainTabs} />
-            <Stack.Screen 
-              name="VendorDetails" 
-              component={VendorDetailsScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen 
-              name="FullMap" 
-              component={FullMapScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="BookingForm"
-              component={BookingFormScreen}
-              options={{
-                headerShown: true,
-                headerTitle: 'Book Service',
-                headerBackTitle: 'Back',
-              }}
-            />
-            <Stack.Screen
-              name="Payment"
-              component={PaymentScreen}
-              options={{
-                headerShown: true,
-                headerTitle: 'Payment',
-                headerBackTitle: 'Back',
-              }}
-            />
-            <Stack.Screen
-              name="PaymentSuccess"
-              component={PaymentSuccessScreen}
-              options={{ 
-                headerShown: false,
-                gestureEnabled: false,
-              }}
-            />
-            <Stack.Screen
-              name="EditProfile"
-              component={EditProfileScreen}
-              options={{
-                headerShown: true,
-                headerTitle: 'Edit Profile',
-                headerBackTitle: 'Back',
-              }}
-            />
-            <Stack.Screen
-              name="BookingHistory"
-              component={BookingHistoryScreen}
-              options={{
-                headerShown: true,
-                headerTitle: 'Booking History',
-                headerBackTitle: 'Back',
-              }}
-            />
-            <Stack.Screen
-              name="BookingDetails"
-              component={BookingDetailsScreen}
-              options={{
-                headerShown: true,
-                headerTitle: 'Booking Details',
-                headerBackTitle: 'Back',
-              }}
-            />
-            <Stack.Screen
-              name="PaymentMethods"
-              component={PaymentMethodsScreen}
-              options={{
-                headerShown: true,
-                headerTitle: 'Payment Methods',
-                headerBackTitle: 'Back',
-              }}
-            />
-            <Stack.Screen
-              name="Notifications"
-              component={NotificationsScreen}
-              options={{
-                headerShown: true,
-                headerTitle: 'Notifications',
-                headerBackTitle: 'Back',
-              }}
-            />
-            <Stack.Screen
-              name="Settings"
-              component={SettingsScreen}
-              options={{
-                headerShown: true,
-                headerTitle: 'Settings',
-                headerBackTitle: 'Back',
-              }}
-            />
-            <Stack.Screen
-              name="Privacy"
-              component={PrivacyPolicyScreen}
-              options={{
-                headerShown: true,
-                headerTitle: 'Privacy Policy',
-                headerBackTitle: 'Back',
-              }}
-            />
-            <Stack.Screen
-              name="Terms"
-              component={TermsScreen}
-              options={{
-                headerShown: true,
-                headerTitle: 'Terms of Service',
-                headerBackTitle: 'Back',
-              }}
-            />
-            <Stack.Screen
-              name="Support"
-              component={SupportScreen}
-              options={{
-                headerShown: true,
-                headerTitle: 'Help & Support',
-                headerBackTitle: 'Back',
-              }}
-            />
-            <Stack.Screen
-              name="About"
-              component={AboutScreen}
-              options={{
-                headerShown: true,
-                headerTitle: 'About',
-                headerBackTitle: 'Back',
-              }}
-            />
-            <Stack.Screen
-              name="SavedVendors"
-              component={SavedVendorsScreen}
-              options={{
-                headerShown: true,
-                headerTitle: 'Saved Vendors',
-                headerBackTitle: 'Back',
-              }}
-            />
-            <Stack.Screen
-              name="SearchFilters"
-              component={SearchFiltersScreen}
-              options={{
-                headerShown: true,
-                headerTitle: 'Search Filters',
-                headerBackTitle: 'Back',
-              }}
-            />
-            <Stack.Screen
-              name="VendorSearch"
-              component={VendorSearchScreen}
-              options={{
-                headerShown: true,
-                headerTitle: 'Search Vendors',
-                headerBackTitle: 'Back',
-              }}
-            />
-            <Stack.Screen
-              name="AddReview"
-              component={AddReviewScreen}
-              options={{
-                headerTitle: 'Add Review',
-                headerBackTitle: 'Back',
-              }}
-            />
-            <Stack.Screen
-              name="EditReview"
-              component={EditReviewScreen}
-              options={{
-                headerTitle: 'Edit Review',
-                headerBackTitle: 'Back',
-              }}
-            />
-          </>
+          // Main App Stack with Tabs
+          <Stack.Screen name="MainApp" component={MainTabs} />
         )}
       </Stack.Navigator>
     </NavigationContainer>

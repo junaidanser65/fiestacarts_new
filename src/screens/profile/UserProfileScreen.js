@@ -57,67 +57,71 @@ export default function UserProfileScreen({ navigation }) {
     <ScrollView style={styles.container}>
       {/* Profile Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.avatarContainer}
-          onPress={() => navigation.navigate('EditProfile')}
-        >
-          <Avatar
-            size={100}
-            rounded
-            source={user?.avatar_url ? { uri: user.avatar_url } : undefined}
-            icon={!user?.avatar_url ? { name: 'person', type: 'material' } : undefined}
-            containerStyle={styles.avatar}
+        <View style={styles.headerContent}>
+          <TouchableOpacity 
+            style={styles.avatarContainer}
+            onPress={() => navigation.navigate('EditProfile')}
           >
-            <Avatar.Accessory size={30} />
-          </Avatar>
-          <View style={styles.profileInfo}>
-            <Text style={styles.name}>
-              {user?.first_name ? `${user.first_name} ${user.last_name}` : 'Complete Your Profile'}
-            </Text>
-            <Text style={styles.email}>{user?.email}</Text>
-          </View>
-        </TouchableOpacity>
+            <Avatar
+              size={80}
+              rounded
+              source={user?.avatar_url ? { uri: user.avatar_url } : undefined}
+              icon={!user?.avatar_url ? { name: 'person', type: 'material' } : undefined}
+              containerStyle={styles.avatar}
+            >
+              <Avatar.Accessory size={24} />
+            </Avatar>
+            <View style={styles.profileInfo}>
+              <Text style={styles.name}>
+                {user?.first_name ? `${user.first_name} ${user.last_name}` : 'Complete Your Profile'}
+              </Text>
+              <Text style={styles.email}>{user?.email}</Text>
+            </View>
+          </TouchableOpacity>
 
-        {/* Profile Completion */}
-        <View style={styles.completionContainer}>
-          <View style={styles.completionHeader}>
-            <Text style={styles.completionTitle}>Profile Completion</Text>
-            <Text style={styles.completionPercentage}>{getProfileCompletion()}%</Text>
-          </View>
-          <View style={styles.progressBar}>
-            <View 
-              style={[
-                styles.progressFill, 
-                { width: `${getProfileCompletion()}%` }
-              ]} 
-            />
+          {/* Profile Completion */}
+          <View style={styles.completionContainer}>
+            <View style={styles.completionHeader}>
+              <Text style={styles.completionTitle}>Profile Completion</Text>
+              <Text style={styles.completionPercentage}>{getProfileCompletion()}%</Text>
+            </View>
+            <View style={styles.progressBar}>
+              <View 
+                style={[
+                  styles.progressFill, 
+                  { width: `${getProfileCompletion()}%` }
+                ]} 
+              />
+            </View>
           </View>
         </View>
       </View>
 
       {/* Profile Sections */}
-      {PROFILE_SECTIONS.map((section, index) => (
-        <View key={section.title} style={styles.section}>
-          <Text style={styles.sectionTitle}>{section.title}</Text>
-          {section.items.map((item, itemIndex) => (
-            <ListItem
-              key={item.id}
-              onPress={() => navigation.navigate(item.screen)}
-              containerStyle={[
-                styles.listItem,
-                itemIndex === 0 && styles.firstListItem,
-                itemIndex === section.items.length - 1 && styles.lastListItem,
-              ]}
-            >
-              <Icon name={item.icon} color={colors.primary} />
-              <ListItem.Content>
-                <ListItem.Title style={styles.listItemTitle}>{item.title}</ListItem.Title>
-              </ListItem.Content>
-              <ListItem.Chevron />
-            </ListItem>
-          ))}
-        </View>
-      ))}
+      <View style={styles.sectionsContainer}>
+        {PROFILE_SECTIONS.map((section, index) => (
+          <View key={section.title} style={styles.section}>
+            <Text style={styles.sectionTitle}>{section.title}</Text>
+            {section.items.map((item, itemIndex) => (
+              <ListItem
+                key={item.id}
+                onPress={() => navigation.navigate(item.screen)}
+                containerStyle={[
+                  styles.listItem,
+                  itemIndex === 0 && styles.firstListItem,
+                  itemIndex === section.items.length - 1 && styles.lastListItem,
+                ]}
+              >
+                <Icon name={item.icon} color={colors.primary} size={24} />
+                <ListItem.Content>
+                  <ListItem.Title style={styles.listItemTitle}>{item.title}</ListItem.Title>
+                </ListItem.Content>
+                <ListItem.Chevron color={colors.textLight} />
+              </ListItem>
+            ))}
+          </View>
+        ))}
+      </View>
 
       {/* Logout Button */}
       <Button
@@ -139,12 +143,17 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: colors.primary,
+    paddingTop: spacing.xl,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
     padding: spacing.lg,
-    paddingBottom: spacing.xl + spacing.lg,
   },
   avatarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: spacing.lg,
   },
   avatar: {
     borderWidth: 3,
@@ -152,6 +161,7 @@ const styles = StyleSheet.create({
   },
   profileInfo: {
     marginLeft: spacing.lg,
+    flex: 1,
   },
   name: {
     ...typography.h2,
@@ -164,7 +174,7 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   completionContainer: {
-    marginTop: spacing.xl,
+    marginTop: spacing.md,
   },
   completionHeader: {
     flexDirection: 'row',
@@ -191,12 +201,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderRadius: 3,
   },
-  section: {
+  sectionsContainer: {
+    padding: spacing.md,
     marginTop: -spacing.xl,
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.lg,
+  },
+  section: {
     backgroundColor: colors.background,
-    borderRadius: 12,
+    borderRadius: 16,
+    marginBottom: spacing.lg,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -206,8 +218,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...typography.h3,
-    padding: spacing.md,
     color: colors.textLight,
+    padding: spacing.md,
   },
   listItem: {
     paddingVertical: spacing.md,
@@ -222,14 +234,16 @@ const styles = StyleSheet.create({
   },
   listItemTitle: {
     ...typography.body,
+    color: colors.text,
   },
   logoutButton: {
     backgroundColor: colors.error,
-    borderRadius: 8,
+    borderRadius: 12,
     paddingVertical: spacing.md,
   },
   logoutButtonText: {
     ...typography.body,
+    color: colors.white,
     fontWeight: 'bold',
   },
   logoutButtonContainer: {

@@ -11,6 +11,8 @@ import PricingCalculator from '../../components/vendor/PricingCalculator';
 import ShareButton from '../../components/common/ShareButton';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
+import { useFavorites } from '../../contexts/FavoritesContext';
+import BackButton from '../../components/common/BackButton';
 
 // Mock data - replace with API call later
 const MOCK_VENDOR = {
@@ -63,10 +65,10 @@ const VendorDetailsScreen = ({ route, navigation }) => {
   const [vendor, setVendor] = useState(MOCK_VENDOR);
   const [vendorImages, setVendorImages] = useState([]);
   const [vendorServices, setVendorServices] = useState([]);
+  const { isFavorite, addFavorite, removeFavorite } = useFavorites();
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [isSaved, setIsSaved] = useState(false);
   const [availability, setAvailability] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedServices, setSelectedServices] = useState([]);
@@ -143,58 +145,20 @@ const VendorDetailsScreen = ({ route, navigation }) => {
     fetchVendorData();
   }, [route.params]);
 
-  useEffect(() => {
-    if (vendor?.id && user?.id) {
-      checkIfSaved();
-      fetchAvailability();
-    }
-  }, [vendor?.id, user?.id]);
-
-  const checkIfSaved = async () => {
-    if (!user?.id || !vendor?.id) return;
-
+  const toggleFavorite = () => {
+    setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('saved_vendors')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('vendor_id', vendor.id)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error checking saved status:', error);
-        return;
-      }
-
-      setIsSaved(!!data);
-    } catch (error) {
-      console.error('Error checking saved status:', error);
-    }
-  };
-
-  const toggleSave = async () => {
-    try {
-      if (isSaved) {
-        const { error } = await supabase
-          .from('saved_vendors')
-          .delete()
-          .match({ user_id: user.id, vendor_id: vendor.id });
-
-        if (error) throw error;
-        setIsSaved(false);
-        Alert.alert('Success', 'Vendor removed from saved list');
+      if (isFavorite(vendor.id)) {
+        removeFavorite(vendor.id);
+        Alert.alert('Success', 'Vendor removed from favorites');
       } else {
-        const { error } = await supabase
-          .from('saved_vendors')
-          .insert([{ user_id: user.id, vendor_id: vendor.id }]);
-
-        if (error) throw error;
-        setIsSaved(true);
-        Alert.alert('Success', 'Vendor saved to your list');
+        addFavorite(vendor);
+        Alert.alert('Success', 'Vendor added to favorites');
       }
     } catch (error) {
-      console.error('Error toggling save:', error);
-      Alert.alert('Error', 'Failed to update saved vendors');
+      Alert.alert('Error', 'Failed to update favorites');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -295,60 +259,76 @@ const VendorDetailsScreen = ({ route, navigation }) => {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <ImageGallery images={vendorImages} />
-      
-      <View style={styles.header}>
-        <View style={styles.titleContainer}>
+    <View style={styles.container}>
+      <TouchableOpacity style={styles.backButtonContainer} onPress={() => navigation.goBack()}>
+        <View style={styles.backButtonCircle}>
+          <Icon name="arrow-back" size={24} color={colors.primary} />
+        </View>
+      </TouchableOpacity>
+      <ScrollView>
+        <ImageGallery images={vendorImages} />
+        
+        <View style={styles.contentContainer}>
           <Text style={styles.vendorName}>{vendor.name}</Text>
-          <View style={styles.actions}>
-            <TouchableOpacity onPress={toggleSave}>
-              <Icon 
-                name={isSaved ? 'favorite' : 'favorite-border'}
-                color={colors.primary}
+
+          <View style={styles.ratingContainer}>
+            <Icon name="star" color={colors.primary} size={20} />
+            <Text style={styles.rating}>{vendor.rating}</Text>
+            <Text style={styles.reviews}>({vendor.reviews_count} reviews)</Text>
+            <Text style={styles.priceRange}>{vendor.price_range}</Text>
+          </View>
+
+          <View style={styles.actionsContainer}>
+            <TouchableOpacity
+              style={[styles.favoriteButton, isFavorite(vendor.id) && styles.favoriteButtonActive]}
+              onPress={toggleFavorite}
+              disabled={loading}
+            >
+              <Icon
+                name={isFavorite(vendor.id) ? 'favorite' : 'favorite-border'}
+                color={isFavorite(vendor.id) ? colors.error : colors.primary}
                 size={24}
               />
+              <Text style={[
+                styles.favoriteButtonText,
+                isFavorite(vendor.id) && styles.favoriteButtonTextActive
+              ]}>
+                {loading ? 'Updating...' : (isFavorite(vendor.id) ? 'Saved' : 'Save')}
+              </Text>
             </TouchableOpacity>
             <ShareButton onPress={handleShare} />
           </View>
         </View>
-        
-        <View style={styles.ratingContainer}>
-          <Icon name="star" color={colors.primary} size={20} />
-          <Text style={styles.rating}>{vendor.rating}</Text>
-          <Text style={styles.reviews}>({vendor.reviews_count} reviews)</Text>
-          <Text style={styles.priceRange}>{vendor.price_range}</Text>
-        </View>
-      </View>
 
-      <Card containerStyle={styles.section}>
-        <Text style={styles.sectionTitle}>Availability</Text>
-        <AvailabilityCalendar
-          availability={availability}
-          selectedDate={selectedDate}
-          onDateSelect={setSelectedDate}
+        <Card containerStyle={styles.section}>
+          <Text style={styles.sectionTitle}>Availability</Text>
+          <AvailabilityCalendar
+            availability={availability}
+            selectedDate={selectedDate}
+            onDateSelect={setSelectedDate}
+          />
+        </Card>
+
+        <Card containerStyle={styles.section}>
+          <Text style={styles.sectionTitle}>Services & Pricing</Text>
+          <PricingCalculator
+            services={vendorServices}
+            onServiceSelect={handleServiceSelection}
+          />
+        </Card>
+
+        <Button
+          title="Book Now"
+          onPress={handleBookNow}
+          disabled={!selectedDate || selectedServices.length === 0}
+          containerStyle={styles.bookButton}
+          buttonStyle={styles.bookButtonStyle}
+          titleStyle={styles.bookButtonText}
+          disabledStyle={styles.bookButtonDisabled}
+          disabledTitleStyle={styles.bookButtonDisabledText}
         />
-      </Card>
-
-      <Card containerStyle={styles.section}>
-        <Text style={styles.sectionTitle}>Services & Pricing</Text>
-        <PricingCalculator
-          services={vendorServices}
-          onServiceSelect={handleServiceSelection}
-        />
-      </Card>
-
-      <Button
-        title="Book Now"
-        onPress={handleBookNow}
-        disabled={!selectedDate || selectedServices.length === 0}
-        containerStyle={styles.bookButton}
-        buttonStyle={styles.bookButtonStyle}
-        titleStyle={styles.bookButtonText}
-        disabledStyle={styles.bookButtonDisabled}
-        disabledTitleStyle={styles.bookButtonDisabledText}
-      />
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
@@ -357,21 +337,81 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
-    padding: spacing.md,
+  backButtonContainer: {
+    position: 'absolute',
+    top: spacing.xl + spacing.xs,
+    left: spacing.md,
+    zIndex: 1,
   },
-  titleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  backButtonCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.white,
+    justifyContent: 'center',
     alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  contentContainer: {
+    padding: spacing.md,
   },
   vendorName: {
     ...typography.h1,
     color: colors.text,
+    marginBottom: spacing.sm,
   },
-  actions: {
+  ratingContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  rating: {
+    ...typography.body,
+    marginLeft: spacing.xs,
+    marginRight: spacing.xs,
+  },
+  reviews: {
+    ...typography.body,
+    color: colors.textLight,
+    marginRight: spacing.md,
+  },
+  priceRange: {
+    ...typography.body,
+    color: colors.primary,
+    marginLeft: 'auto',
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  favoriteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.background,
+  },
+  favoriteButtonActive: {
+    backgroundColor: colors.error + '10',
+    borderColor: colors.error,
+  },
+  favoriteButtonText: {
+    ...typography.body,
+    color: colors.primary,
+    marginLeft: spacing.xs,
+    fontSize: 14,
+  },
+  favoriteButtonTextActive: {
+    color: colors.error,
   },
   section: {
     marginHorizontal: spacing.md,
@@ -401,67 +441,6 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   bookButtonDisabledText: {
-    color: colors.white,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  rating: {
-    ...typography.body,
-    marginLeft: spacing.xs,
-    marginRight: spacing.xs,
-  },
-  reviews: {
-    ...typography.body,
-    color: colors.textLight,
-  },
-  priceRange: {
-    ...typography.body,
-    color: colors.primary,
-    marginLeft: 'auto',
-  },
-  serviceItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  selectedService: {
-    backgroundColor: colors.primaryLight,
-    borderColor: colors.primary,
-  },
-  serviceInfo: {
-    flex: 1,
-    marginRight: spacing.md,
-  },
-  serviceTitle: {
-    ...typography.h3,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  selectedServiceTitle: {
-    color: colors.white,
-  },
-  serviceDescription: {
-    ...typography.body,
-    color: colors.textLight,
-  },
-  selectedServiceDescription: {
-    color: colors.white,
-  },
-  servicePrice: {
-    ...typography.h3,
-    color: colors.primary,
-    fontWeight: 'bold',
-  },
-  selectedServicePrice: {
     color: colors.white,
   },
 });

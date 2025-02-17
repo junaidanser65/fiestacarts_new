@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Alert } from 'rea
 import { Button, Card, Icon, Input } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
 import { useBooking } from '../../contexts/BookingContext';
+import BackButton from '../../components/common/BackButton';
 
 export default function PaymentScreen({ route, navigation }) {
   const { bookings } = route.params; // Get bookings from route params
@@ -67,86 +68,93 @@ export default function PaymentScreen({ route, navigation }) {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Order Summary */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Order Summary</Text>
-        {bookings.map((booking) => (
-          <Card key={booking.id} containerStyle={styles.bookingCard}>
-            <Text style={styles.vendorName}>{booking.vendor.name}</Text>
-            <View style={styles.bookingDetails}>
-              <Text style={styles.dateInfo}>
-                {formatDate(booking.selectedDate)} at {formatTime(booking.time)}
-              </Text>
-              <Text style={styles.guestInfo}>
-                {booking.guests} guests
-              </Text>
-            </View>
-            {booking.selectedServices.map(service => (
-              <View key={service.id} style={styles.serviceItem}>
-                <Text style={styles.serviceName}>{service.name}</Text>
-                <Text style={styles.servicePrice}>
-                  ${(service.price * booking.guests).toLocaleString()}
+    <View style={styles.container}>
+      <TouchableOpacity style={styles.backButtonContainer} onPress={() => navigation.goBack()}>
+        <View style={styles.backButtonCircle}>
+          <Icon name="arrow-back" size={24} color={colors.primary} />
+        </View>
+      </TouchableOpacity>
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* Order Summary */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Order Summary</Text>
+          {bookings.map((booking) => (
+            <Card key={booking.id} containerStyle={styles.bookingCard}>
+              <Text style={styles.vendorName}>{booking.vendor.name}</Text>
+              <View style={styles.bookingDetails}>
+                <Text style={styles.dateInfo}>
+                  {formatDate(booking.selectedDate)} at {formatTime(booking.time)}
+                </Text>
+                <Text style={styles.guestInfo}>
+                  {booking.guests} guests
                 </Text>
               </View>
-            ))}
-          </Card>
-        ))}
-        <View style={styles.totalContainer}>
-          <Text style={styles.totalLabel}>Total Amount</Text>
-          <Text style={styles.totalAmount}>${calculateTotal().toLocaleString()}</Text>
+              {booking.selectedServices.map(service => (
+                <View key={service.id} style={styles.serviceItem}>
+                  <Text style={styles.serviceName}>{service.name}</Text>
+                  <Text style={styles.servicePrice}>
+                    ${(service.price * booking.guests).toLocaleString()}
+                  </Text>
+                </View>
+              ))}
+            </Card>
+          ))}
+          <View style={styles.totalContainer}>
+            <Text style={styles.totalLabel}>Total Amount</Text>
+            <Text style={styles.totalAmount}>${calculateTotal().toLocaleString()}</Text>
+          </View>
         </View>
-      </View>
 
-      {/* Payment Method */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Payment Method</Text>
-        <TouchableOpacity
-          style={[styles.methodCard, selectedMethod === 'card' && styles.selectedMethod]}
-          onPress={() => setSelectedMethod('card')}
-        >
-          <Icon name="credit-card" color={colors.primary} size={24} />
-          <Text style={styles.methodName}>Credit/Debit Card</Text>
-          {selectedMethod === 'card' && (
-            <Icon name="check-circle" color={colors.primary} size={24} />
-          )}
-        </TouchableOpacity>
-      </View>
+        {/* Payment Method */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Payment Method</Text>
+          <TouchableOpacity
+            style={[styles.methodCard, selectedMethod === 'card' && styles.selectedMethod]}
+            onPress={() => setSelectedMethod('card')}
+          >
+            <Icon name="credit-card" color={colors.primary} size={24} />
+            <Text style={styles.methodName}>Credit/Debit Card</Text>
+            {selectedMethod === 'card' && (
+              <Icon name="check-circle" color={colors.primary} size={24} />
+            )}
+          </TouchableOpacity>
+        </View>
 
-      {/* Card Details */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Card Details</Text>
-        <Input
-          placeholder="Card Number"
-          leftIcon={<Icon name="credit-card" color={colors.textLight} size={20} />}
-          keyboardType="number-pad"
-        />
-        <View style={styles.cardRow}>
+        {/* Card Details */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Card Details</Text>
           <Input
-            containerStyle={styles.expiryInput}
-            placeholder="MM/YY"
+            placeholder="Card Number"
+            leftIcon={<Icon name="credit-card" color={colors.textLight} size={20} />}
             keyboardType="number-pad"
           />
+          <View style={styles.cardRow}>
+            <Input
+              containerStyle={styles.expiryInput}
+              placeholder="MM/YY"
+              keyboardType="number-pad"
+            />
+            <Input
+              containerStyle={styles.cvvInput}
+              placeholder="CVV"
+              keyboardType="number-pad"
+              secureTextEntry
+            />
+          </View>
           <Input
-            containerStyle={styles.cvvInput}
-            placeholder="CVV"
-            keyboardType="number-pad"
-            secureTextEntry
+            placeholder="Cardholder Name"
+            leftIcon={<Icon name="person" color={colors.textLight} size={20} />}
           />
         </View>
-        <Input
-          placeholder="Cardholder Name"
-          leftIcon={<Icon name="person" color={colors.textLight} size={20} />}
-        />
-      </View>
 
-      <Button
-        title={`Pay $${calculateTotal().toLocaleString()}`}
-        onPress={handlePayment}
-        buttonStyle={styles.payButton}
-        containerStyle={styles.payButtonContainer}
-      />
-    </ScrollView>
+        <Button
+          title="Pay Now"
+          onPress={handlePayment}
+          buttonStyle={styles.payButton}
+          containerStyle={styles.payButtonContainer}
+        />
+      </ScrollView>
+    </View>
   );
 }
 
@@ -155,17 +163,49 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  backButtonContainer: {
+    position: 'absolute',
+    top: spacing.xl + spacing.xs,
+    left: spacing.md,
+    zIndex: 1,
+  },
+  backButtonCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  content: {
+    paddingTop: spacing.xl * 2,
+  },
   section: {
-    padding: spacing.md,
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   sectionTitle: {
-    ...typography.h3,
+    ...typography.h2,
     marginBottom: spacing.md,
+    color: colors.text,
   },
   bookingCard: {
     borderRadius: 8,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
     padding: spacing.md,
+    elevation: 2,
   },
   vendorName: {
     ...typography.h3,
@@ -242,11 +282,11 @@ const styles = StyleSheet.create({
   },
   payButton: {
     backgroundColor: colors.primary,
-    padding: spacing.md,
-    margin: spacing.md,
     borderRadius: 8,
+    paddingVertical: spacing.md,
   },
   payButtonContainer: {
-    marginBottom: spacing.xl,
+    marginVertical: spacing.xl,
+    marginHorizontal: spacing.md,
   },
 }); 
