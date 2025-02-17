@@ -340,7 +340,7 @@ vendors-caterers-app/
 │   │   ├── actions/
 │   │   ├── reducers/
 │   │   ├── selectors/
-│   │   └── index.js
+│   │   
 │   │
 │   ├── styles/             # Global styles
 │   │   ├── colors.js
@@ -351,9 +351,9 @@ vendors-caterers-app/
 │   ├── utils/              # Utility functions
 │   │   ├── formatters.js
 │   │   ├── validators.js
-│   │   └── ...
-│   │
-│   └── App.js              # Root component
+│       └── ...
+│
+│
 │
 ├── .gitignore
 ├── app.json                # Expo configuration
@@ -361,3 +361,5 @@ vendors-caterers-app/
 ├── CONTEXT.md              # Project context and documentation
 ├── package.json
 └── README.md
+└── index.js
+└── app.js
