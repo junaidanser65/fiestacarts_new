@@ -1,71 +1,105 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, View, Text, ScrollView } from 'react-native';
-import { Button, Icon, Card } from '@rneui/themed';
+import { Button, Card, Icon } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
 import { useBooking } from '../../contexts/BookingContext';
 
 export default function PaymentSuccessScreen({ route, navigation }) {
   const { amount, bookings } = route.params;
-  const { clearBookings } = useBooking();
+  const { clearBookings, addBooking } = useBooking();
+
+  useEffect(() => {
+    // Save paid bookings to context
+    bookings.forEach(booking => {
+      addBooking(booking);
+    });
+    // Clear the cart
+    clearBookings();
+  }, []);
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  const formatTime = (timeString) => {
+    const time = new Date(timeString);
+    return time.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
 
   const handleViewBookings = () => {
-    clearBookings();
-    navigation.navigate('BookingHistory');
+    navigation.reset({
+      index: 0,
+      routes: [
+        {
+          name: 'MainApp',
+          state: {
+            index: 2, // Profile tab
+            routes: [
+              { name: 'Dashboard' },
+              { name: 'Bookings' },
+              {
+                name: 'Profile'
+              }
+            ]
+          }
+        }
+      ]
+    });
+
+    // After resetting to Profile tab, navigate to BookingHistory
+    setTimeout(() => {
+      navigation.navigate('BookingHistory', { initialTab: 'upcoming' });
+    }, 100);
   };
 
   const handleBackToHome = () => {
-    clearBookings();
-    navigation.navigate('Dashboard');
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'MainApp' }],
+    });
   };
 
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Success Animation */}
-        <View style={styles.animationContainer}>
-          <Icon 
-            name="check-circle" 
-            color={colors.success} 
-            size={100} 
-            style={styles.successIcon}
-          />
-        </View>
-
-        {/* Success Message */}
+        <Icon
+          name="check-circle"
+          color={colors.primary}
+          size={80}
+          style={styles.icon}
+        />
         <Text style={styles.title}>Payment Successful!</Text>
-        <Text style={styles.subtitle}>Your bookings have been confirmed</Text>
-        <Text style={styles.amount}>${amount}</Text>
+        <Text style={styles.subtitle}>
+          Total Amount Paid: ${amount.toLocaleString()}
+        </Text>
 
-        {/* Booking Summary */}
         <View style={styles.summaryContainer}>
           <Text style={styles.sectionTitle}>Booking Summary</Text>
           {bookings.map((booking) => (
             <Card key={booking.id} containerStyle={styles.bookingCard}>
               <Text style={styles.vendorName}>{booking.vendor.name}</Text>
               <Text style={styles.serviceInfo}>
-                {booking.selectedService.name} - {booking.guests} guests
+                {booking.selectedServices.map(service => service.name).join(', ')}
               </Text>
               <Text style={styles.dateInfo}>
-                {booking.date.toLocaleDateString()} at{' '}
-                {booking.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {formatDate(booking.selectedDate)} at {formatTime(booking.time)}
+              </Text>
+              <Text style={styles.guestInfo}>
+                {booking.guests} guests
               </Text>
             </Card>
           ))}
         </View>
 
-        {/* Additional Info */}
-        <View style={styles.infoContainer}>
-          <View style={styles.infoItem}>
-            <Icon name="email" color={colors.primary} size={24} />
-            <Text style={styles.infoText}>Confirmation email sent</Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Icon name="calendar" color={colors.primary} size={24} />
-            <Text style={styles.infoText}>Added to your calendar</Text>
-          </View>
-        </View>
-
-        {/* Action Buttons */}
         <View style={styles.buttonContainer}>
           <Button
             title="View My Bookings"
@@ -92,41 +126,30 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
-    padding: spacing.lg,
+    padding: spacing.xl,
     alignItems: 'center',
   },
-  animationContainer: {
-    height: 200,
-    alignItems: 'center',
-    justifyContent: 'center',
+  icon: {
     marginBottom: spacing.xl,
-  },
-  successIcon: {
-    marginBottom: spacing.lg,
   },
   title: {
     ...typography.h1,
-    color: colors.success,
+    color: colors.text,
+    marginBottom: spacing.md,
     textAlign: 'center',
-    marginBottom: spacing.sm,
   },
   subtitle: {
-    ...typography.body,
-    color: colors.textLight,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  amount: {
-    ...typography.h1,
+    ...typography.h2,
     color: colors.primary,
     marginBottom: spacing.xl,
+    textAlign: 'center',
   },
   summaryContainer: {
     width: '100%',
     marginBottom: spacing.xl,
   },
   sectionTitle: {
-    ...typography.h2,
+    ...typography.h3,
     marginBottom: spacing.md,
   },
   bookingCard: {
@@ -146,19 +169,11 @@ const styles = StyleSheet.create({
   dateInfo: {
     ...typography.body,
     color: colors.textLight,
+    marginBottom: spacing.xs,
   },
-  infoContainer: {
-    width: '100%',
-    marginBottom: spacing.xl,
-  },
-  infoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  infoText: {
+  guestInfo: {
     ...typography.body,
-    marginLeft: spacing.md,
+    color: colors.textLight,
   },
   buttonContainer: {
     width: '100%',
@@ -168,12 +183,12 @@ const styles = StyleSheet.create({
   },
   viewBookingsButton: {
     backgroundColor: colors.primary,
-    borderRadius: 8,
     paddingVertical: spacing.md,
+    borderRadius: 8,
   },
   homeButton: {
     borderColor: colors.primary,
-    borderRadius: 8,
     paddingVertical: spacing.md,
+    borderRadius: 8,
   },
 }); 

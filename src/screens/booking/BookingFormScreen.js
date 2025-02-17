@@ -1,57 +1,20 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Button, Input, Icon } from '@rneui/themed';
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import { colors, spacing, typography } from '../../styles/theme';
 import { useBooking } from '../../contexts/BookingContext';
 
 export default function BookingFormScreen({ route, navigation }) {
-  const { vendor } = route.params;
+  const { vendor, selectedDate, selectedServices, totalPrice } = route.params;
   const { addBooking } = useBooking();
   const { showActionSheetWithOptions } = useActionSheet();
   
   const [formData, setFormData] = useState({
-    date: new Date(),
     time: new Date(),
     guests: 1,
-    selectedService: null,
     notes: '',
   });
-  
-  const handleDateSelect = () => {
-    const options = ['Today', 'Tomorrow', 'Next Week', 'Next Month', 'Cancel'];
-    const cancelButtonIndex = 4;
-
-    showActionSheetWithOptions(
-      {
-        options,
-        cancelButtonIndex,
-        title: 'Select Date',
-      },
-      (selectedIndex) => {
-        if (selectedIndex === cancelButtonIndex) return;
-
-        const today = new Date();
-        let selectedDate = new Date();
-
-        switch (selectedIndex) {
-          case 0: // Today
-            break;
-          case 1: // Tomorrow
-            selectedDate.setDate(today.getDate() + 1);
-            break;
-          case 2: // Next Week
-            selectedDate.setDate(today.getDate() + 7);
-            break;
-          case 3: // Next Month
-            selectedDate.setMonth(today.getMonth() + 1);
-            break;
-        }
-
-        setFormData(prev => ({ ...prev, date: selectedDate }));
-      }
-    );
-  };
 
   const handleTimeSelect = () => {
     const timeSlots = [
@@ -89,34 +52,94 @@ export default function BookingFormScreen({ route, navigation }) {
     }));
   };
 
-  const handleServiceSelect = (service) => {
-    setFormData(prev => ({ ...prev, selectedService: service }));
+  const handleSubmit = () => {
+    if (!formData.time) {
+      Alert.alert('Required', 'Please select a time slot');
+      return;
+    }
+
+    Alert.alert(
+      'Confirm Booking',
+      `Total amount: $${totalPrice.toLocaleString()}`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Confirm',
+          onPress: () => {
+            // Create the booking object with proper date handling
+            const booking = {
+              id: Date.now().toString(),
+              vendor,
+              selectedDate: new Date(selectedDate).toISOString(), // Convert to ISO string
+              selectedServices,
+              totalPrice,
+              time: formData.time.toISOString(), // Convert to ISO string
+              guests: formData.guests,
+              notes: formData.notes,
+              status: 'pending',
+              createdAt: new Date().toISOString(),
+            };
+
+            // Add to booking context
+            addBooking(booking);
+
+            // Show success message and navigate to cart
+            Alert.alert(
+              'Booking Added',
+              'Your booking has been added to cart!',
+              [
+                {
+                  text: 'View Cart',
+                  onPress: () => {
+                    navigation.reset({
+                      index: 0,
+                      routes: [
+                        {
+                          name: 'MainApp',
+                          state: {
+                            routes: [{ name: 'Bookings' }]
+                          }
+                        }
+                      ],
+                    });
+                  }
+                },
+                {
+                  text: 'Continue Shopping',
+                  onPress: () => navigation.navigate('Dashboard'),
+                }
+              ]
+            );
+          },
+        },
+      ],
+      { cancelable: false }
+    );
   };
 
-  const handleSubmit = () => {
-    const booking = {
-      id: Date.now().toString(),
-      vendor,
-      ...formData,
-    };
-    addBooking(booking);
-    navigation.navigate('BookingCart');
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
   };
 
   return (
     <ScrollView style={styles.container}>
-      {/* Date Selection */}
+      {/* Event Date (Read-only) */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Event Date</Text>
-        <TouchableOpacity
-          style={styles.dateButton}
-          onPress={handleDateSelect}
-        >
+        <View style={styles.infoContainer}>
           <Icon name="event" color={colors.primary} size={24} />
-          <Text style={styles.dateText}>
-            {formData.date.toLocaleDateString()}
+          <Text style={styles.infoText}>
+            {formatDate(selectedDate)}
           </Text>
-        </TouchableOpacity>
+        </View>
       </View>
 
       {/* Time Selection */}
@@ -153,25 +176,25 @@ export default function BookingFormScreen({ route, navigation }) {
         </View>
       </View>
 
-      {/* Service Selection */}
+      {/* Selected Services (Read-only) */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Select Service</Text>
-        {vendor.services?.map((service, index) => (
-          <TouchableOpacity
+        <Text style={styles.sectionTitle}>Selected Services</Text>
+        {selectedServices.map((service, index) => (
+          <View
             key={index}
-            style={[
-              styles.serviceCard,
-              formData.selectedService === service && styles.selectedService,
-            ]}
-            onPress={() => handleServiceSelect(service)}
+            style={styles.serviceCard}
           >
             <View style={styles.serviceInfo}>
               <Text style={styles.serviceTitle}>{service.name}</Text>
               <Text style={styles.serviceDescription}>{service.description}</Text>
             </View>
-            <Text style={styles.servicePrice}>{service.price}</Text>
-          </TouchableOpacity>
+            <Text style={styles.servicePrice}>${service.price.toLocaleString()}</Text>
+          </View>
         ))}
+        <View style={styles.totalContainer}>
+          <Text style={styles.totalLabel}>Total</Text>
+          <Text style={styles.totalAmount}>${totalPrice.toLocaleString()}</Text>
+        </View>
       </View>
 
       {/* Special Requests */}
@@ -188,13 +211,14 @@ export default function BookingFormScreen({ route, navigation }) {
         />
       </View>
 
-      {/* Submit Button */}
+      {/* Submit Button - Updated text and styles */}
       <Button
-        title="Add to Cart"
+        title="Confirm Booking"
         onPress={handleSubmit}
-        buttonStyle={styles.submitButton}
+        buttonStyle={[styles.submitButton, styles.confirmButton]}
         containerStyle={styles.submitButtonContainer}
-        disabled={!formData.selectedService}
+        titleStyle={styles.confirmButtonText}
+        disabled={!formData.time || formData.guests < 1}
       />
     </ScrollView>
   );
@@ -213,6 +237,19 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...typography.h3,
     marginBottom: spacing.md,
+    color: colors.text,
+  },
+  infoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+  },
+  infoText: {
+    ...typography.body,
+    marginLeft: spacing.md,
+    color: colors.primary,
   },
   dateButton: {
     flexDirection: 'row',
@@ -220,6 +257,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     backgroundColor: colors.surface,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
   dateText: {
     ...typography.body,
@@ -237,6 +276,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
   guestCount: {
     ...typography.h2,
@@ -249,11 +290,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 8,
     marginBottom: spacing.sm,
-  },
-  selectedService: {
-    backgroundColor: colors.primary + '20',
-    borderColor: colors.primary,
     borderWidth: 1,
+    borderColor: colors.border,
   },
   serviceInfo: {
     flex: 1,
@@ -272,6 +310,23 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: 'bold',
   },
+  totalContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  totalLabel: {
+    ...typography.h3,
+    color: colors.text,
+  },
+  totalAmount: {
+    ...typography.h2,
+    color: colors.primary,
+  },
   notesContainer: {
     paddingHorizontal: 0,
   },
@@ -285,7 +340,23 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     margin: spacing.lg,
   },
+  confirmButton: {
+    backgroundColor: colors.primary,
+    elevation: 2,
+  },
+  confirmButtonText: {
+    ...typography.button,
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.white,
+  },
   submitButtonContainer: {
     marginBottom: spacing.xl,
+  },
+  icon: {
+    color: colors.primary,
+  },
+  activeButton: {
+    backgroundColor: colors.primaryLight,
   },
 }); 

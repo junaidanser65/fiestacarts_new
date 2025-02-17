@@ -79,24 +79,36 @@ const FEATURED_VENDORS = [
     name: 'Royal Palace',
     category: 'Venues',
     rating: 5.0,
-    reviews: 230,
-    priceRange: '$$$',
-    image: 'https://via.placeholder.com/300x200',
-    badge: 'Featured',
+    reviews_count: 230,
+    price_range: '$$$',
+    image_url: 'https://via.placeholder.com/300x200',
+    description: 'Luxurious venue for all your special occasions',
     latitude: 37.78625,
     longitude: -122.4344,
+    address: '456 Grand Ave, San Francisco, CA 94102',
+    contact_phone: '+1234567890',
+    contact_email: 'info@royalpalace.com',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    badge: 'Featured',
   },
   {
     id: '5',
     name: 'Elite Decorators',
     category: 'Decoration',
     rating: 4.9,
-    reviews: 180,
-    priceRange: '$$',
-    image: 'https://via.placeholder.com/300x200',
-    badge: 'Top Rated',
+    reviews_count: 180,
+    price_range: '$$',
+    image_url: 'https://via.placeholder.com/300x200',
+    description: 'Premium decoration services for all events',
     latitude: 37.78525,
     longitude: -122.4364,
+    address: '789 Design St, San Francisco, CA 94103',
+    contact_phone: '+1234567891',
+    contact_email: 'info@elitedecorators.com',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    badge: 'Top Rated',
   },
 ];
 
@@ -237,11 +249,7 @@ export default function MainDashboardScreen({ navigation }) {
             {FEATURED_VENDORS.map((vendor) => (
               <VendorCard
                 key={vendor.id}
-                vendor={{
-                  ...vendor,
-                  reviews_count: vendor.reviews,
-                  image_url: vendor.image,
-                }}
+                vendor={vendor}
                 onPress={() => navigation.navigate('VendorDetails', { vendor })}
                 featured={true}
                 style={styles.featuredVendorCard}

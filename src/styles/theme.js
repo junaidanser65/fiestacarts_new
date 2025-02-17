@@ -1,15 +1,15 @@
 export const colors = {
-  primary: '#FF4500', // Orange-Red
-  primaryLight: '#FF7F50', // Lighter shade of orange-red
-  primaryDark: '#CC3700', // Darker shade of orange-red
-  background: '#FFFFFF',
-  surface: '#F5F5F5',
-  border: '#E0E0E0',
-  text: '#1A1A1A',
-  textLight: '#757575',
-  error: '#DC3545',
-  success: '#28A745',
-  warning: '#FFC107',
+  primary: '#ff4500', // Main orange-red color
+  primaryLight: '#ff6933', // Lighter shade for hover/active states
+  primaryDark: '#cc3700', // Darker shade for pressed states
+  success: '#ff4500', // Use primary color for success/confirmation
+  background: '#ffffff',
+  surface: '#f8f8f8',
+  text: '#333333',
+  textLight: '#666666',
+  border: '#e0e0e0',
+  error: '#dc3545',
+  white: '#ffffff',
 };
 
 export const spacing = {

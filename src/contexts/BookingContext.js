@@ -9,6 +9,12 @@ export function BookingProvider({ children }) {
     setBookings(prev => [...prev, booking]);
   };
 
+  const updateBooking = (updatedBooking) => {
+    setBookings(prev => prev.map(booking => 
+      booking.id === updatedBooking.id ? updatedBooking : booking
+    ));
+  };
+
   const removeBooking = (bookingId) => {
     setBookings(prev => prev.filter(booking => booking.id !== bookingId));
   };
@@ -27,6 +33,7 @@ export function BookingProvider({ children }) {
     <BookingContext.Provider value={{
       bookings,
       addBooking,
+      updateBooking,
       removeBooking,
       modifyBooking,
       clearBookings,

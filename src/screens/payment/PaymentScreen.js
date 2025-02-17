@@ -1,38 +1,69 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity } from 'react-native';
-import { Button, Icon, Card, Input } from '@rneui/themed';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { Button, Card, Icon, Input } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
 import { useBooking } from '../../contexts/BookingContext';
 
-const PAYMENT_METHODS = [
-  { id: 'card', name: 'Credit/Debit Card', icon: 'credit-card' },
-  { id: 'paypal', name: 'PayPal', icon: 'payment' },
-  { id: 'bank', name: 'Bank Transfer', icon: 'account-balance' },
-];
-
 export default function PaymentScreen({ route, navigation }) {
-  const { bookings } = useBooking();
+  const { bookings } = route.params; // Get bookings from route params
   const [selectedMethod, setSelectedMethod] = useState('card');
-  const [cardDetails, setCardDetails] = useState({
-    number: '',
-    expiry: '',
-    cvv: '',
-    name: '',
-  });
+  const { updateBooking } = useBooking();
 
   const calculateTotal = () => {
     return bookings.reduce((total, booking) => {
-      const basePrice = parseFloat(booking.selectedService.price.replace(/[^0-9.]/g, ''));
-      return total + (basePrice * booking.guests);
+      return total + (booking.totalPrice * booking.guests);
     }, 0);
   };
 
-  const handlePayment = () => {
-    // TODO: Implement payment processing
-    navigation.navigate('PaymentSuccess', {
-      amount: calculateTotal(),
-      bookings: bookings,
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
     });
+  };
+
+  const formatTime = (timeString) => {
+    const time = new Date(timeString);
+    return time.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  const handlePayment = () => {
+    try {
+      // Process each booking
+      const processedBookings = bookings.map(booking => {
+        const updatedBooking = {
+          ...booking,
+          vendor: booking.vendor,
+          selectedDate: booking.selectedDate,
+          time: booking.time,
+          guests: booking.guests,
+          selectedServices: booking.selectedServices,
+          totalPrice: booking.totalPrice,
+          notes: booking.notes || '',
+          status: 'paid',
+          paymentDate: new Date().toISOString()
+        };
+
+        // Update each booking in the context
+        updateBooking(updatedBooking);
+        return updatedBooking;
+      });
+
+      // Navigate to success screen
+      navigation.navigate('PaymentSuccess', {
+        amount: calculateTotal(),
+        bookings: processedBookings,
+      });
+    } catch (error) {
+      console.error('Payment error:', error);
+      Alert.alert('Error', 'Failed to process payment. Please try again.');
+    }
   };
 
   return (
@@ -43,92 +74,77 @@ export default function PaymentScreen({ route, navigation }) {
         {bookings.map((booking) => (
           <Card key={booking.id} containerStyle={styles.bookingCard}>
             <Text style={styles.vendorName}>{booking.vendor.name}</Text>
-            <Text style={styles.serviceInfo}>
-              {booking.selectedService.name} - {booking.guests} guests
-            </Text>
-            <Text style={styles.dateInfo}>
-              {booking.date.toLocaleDateString()} at{' '}
-              {booking.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </Text>
-            <Text style={styles.price}>
-              ${parseFloat(booking.selectedService.price.replace(/[^0-9.]/g, '')) * booking.guests}
-            </Text>
+            <View style={styles.bookingDetails}>
+              <Text style={styles.dateInfo}>
+                {formatDate(booking.selectedDate)} at {formatTime(booking.time)}
+              </Text>
+              <Text style={styles.guestInfo}>
+                {booking.guests} guests
+              </Text>
+            </View>
+            {booking.selectedServices.map(service => (
+              <View key={service.id} style={styles.serviceItem}>
+                <Text style={styles.serviceName}>{service.name}</Text>
+                <Text style={styles.servicePrice}>
+                  ${(service.price * booking.guests).toLocaleString()}
+                </Text>
+              </View>
+            ))}
           </Card>
         ))}
         <View style={styles.totalContainer}>
           <Text style={styles.totalLabel}>Total Amount</Text>
-          <Text style={styles.totalAmount}>${calculateTotal()}</Text>
+          <Text style={styles.totalAmount}>${calculateTotal().toLocaleString()}</Text>
         </View>
       </View>
 
-      {/* Payment Method Selection */}
+      {/* Payment Method */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Payment Method</Text>
-        {PAYMENT_METHODS.map((method) => (
-          <TouchableOpacity
-            key={method.id}
-            style={[
-              styles.methodCard,
-              selectedMethod === method.id && styles.selectedMethod,
-            ]}
-            onPress={() => setSelectedMethod(method.id)}
-          >
-            <Icon name={method.icon} color={colors.primary} size={24} />
-            <Text style={styles.methodName}>{method.name}</Text>
-            {selectedMethod === method.id && (
-              <Icon name="check-circle" color={colors.primary} size={24} />
-            )}
-          </TouchableOpacity>
-        ))}
+        <TouchableOpacity
+          style={[styles.methodCard, selectedMethod === 'card' && styles.selectedMethod]}
+          onPress={() => setSelectedMethod('card')}
+        >
+          <Icon name="credit-card" color={colors.primary} size={24} />
+          <Text style={styles.methodName}>Credit/Debit Card</Text>
+          {selectedMethod === 'card' && (
+            <Icon name="check-circle" color={colors.primary} size={24} />
+          )}
+        </TouchableOpacity>
       </View>
 
-      {/* Card Details Form */}
-      {selectedMethod === 'card' && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Card Details</Text>
+      {/* Card Details */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Card Details</Text>
+        <Input
+          placeholder="Card Number"
+          leftIcon={<Icon name="credit-card" color={colors.textLight} size={20} />}
+          keyboardType="number-pad"
+        />
+        <View style={styles.cardRow}>
           <Input
-            placeholder="Card Number"
-            value={cardDetails.number}
-            onChangeText={(text) => setCardDetails(prev => ({ ...prev, number: text }))}
-            leftIcon={<Icon name="credit-card" color={colors.textLight} />}
+            containerStyle={styles.expiryInput}
+            placeholder="MM/YY"
             keyboardType="number-pad"
-            maxLength={16}
           />
-          <View style={styles.row}>
-            <Input
-              containerStyle={styles.halfInput}
-              placeholder="MM/YY"
-              value={cardDetails.expiry}
-              onChangeText={(text) => setCardDetails(prev => ({ ...prev, expiry: text }))}
-              keyboardType="number-pad"
-              maxLength={5}
-            />
-            <Input
-              containerStyle={styles.halfInput}
-              placeholder="CVV"
-              value={cardDetails.cvv}
-              onChangeText={(text) => setCardDetails(prev => ({ ...prev, cvv: text }))}
-              keyboardType="number-pad"
-              maxLength={3}
-              secureTextEntry
-            />
-          </View>
           <Input
-            placeholder="Cardholder Name"
-            value={cardDetails.name}
-            onChangeText={(text) => setCardDetails(prev => ({ ...prev, name: text }))}
-            leftIcon={<Icon name="person" color={colors.textLight} />}
+            containerStyle={styles.cvvInput}
+            placeholder="CVV"
+            keyboardType="number-pad"
+            secureTextEntry
           />
         </View>
-      )}
+        <Input
+          placeholder="Cardholder Name"
+          leftIcon={<Icon name="person" color={colors.textLight} size={20} />}
+        />
+      </View>
 
-      {/* Pay Button */}
       <Button
-        title={`Pay $${calculateTotal()}`}
+        title={`Pay $${calculateTotal().toLocaleString()}`}
         onPress={handlePayment}
         buttonStyle={styles.payButton}
         containerStyle={styles.payButtonContainer}
-        disabled={selectedMethod === 'card' && (!cardDetails.number || !cardDetails.expiry || !cardDetails.cvv || !cardDetails.name)}
       />
     </ScrollView>
   );
@@ -140,42 +156,49 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   section: {
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    padding: spacing.md,
   },
   sectionTitle: {
-    ...typography.h2,
+    ...typography.h3,
     marginBottom: spacing.md,
   },
   bookingCard: {
     borderRadius: 8,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     padding: spacing.md,
   },
   vendorName: {
     ...typography.h3,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
-  serviceInfo: {
-    ...typography.body,
-    color: colors.textLight,
-    marginBottom: spacing.xs,
+  bookingDetails: {
+    marginBottom: spacing.sm,
   },
   dateInfo: {
     ...typography.body,
     color: colors.textLight,
-    marginBottom: spacing.sm,
   },
-  price: {
-    ...typography.h3,
+  guestInfo: {
+    ...typography.body,
+    color: colors.textLight,
+  },
+  serviceItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  serviceName: {
+    ...typography.body,
+    flex: 1,
+  },
+  servicePrice: {
+    ...typography.body,
     color: colors.primary,
-    textAlign: 'right',
+    fontWeight: 'bold',
   },
   totalContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
     marginTop: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: 1,
@@ -195,29 +218,33 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 8,
     marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   selectedMethod: {
-    backgroundColor: colors.primary + '20',
     borderColor: colors.primary,
-    borderWidth: 1,
+    backgroundColor: colors.surface,
   },
   methodName: {
     ...typography.body,
     marginLeft: spacing.md,
     flex: 1,
   },
-  row: {
+  cardRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
   },
-  halfInput: {
+  expiryInput: {
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  cvvInput: {
     flex: 1,
   },
   payButton: {
     backgroundColor: colors.primary,
-    borderRadius: 8,
     padding: spacing.md,
-    margin: spacing.lg,
+    margin: spacing.md,
+    borderRadius: 8,
   },
   payButtonContainer: {
     marginBottom: spacing.xl,

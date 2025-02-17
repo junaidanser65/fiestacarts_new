@@ -1,72 +1,174 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, Image, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, Image, TouchableOpacity, Dimensions, Alert, Share } from 'react-native';
 import { Button, Icon, Card } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import ImageGallery from '../../components/vendor/ImageGallery';
+import AvailabilityCalendar from '../../components/vendor/AvailabilityCalendar';
+import PricingCalculator from '../../components/vendor/PricingCalculator';
+import ShareButton from '../../components/common/ShareButton';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
+import ErrorMessage from '../../components/common/ErrorMessage';
 
 // Mock data - replace with API call later
 const MOCK_VENDOR = {
-  id: '1',
+  id: '123e4567-e89b-12d3-a456-426614174000',
   name: 'Gourmet Catering Co.',
   category: 'Catering',
-  rating: 4.8,
-  reviews: 124,
-  priceRange: '$$',
   description: 'Premium catering services for all types of events. Specializing in corporate events and weddings.',
-  address: '123 Main St, San Francisco, CA 94105',
+  rating: 4.8,
+  reviews_count: 124,
+  price_range: '$$',
+  image_url: 'https://via.placeholder.com/400x300',
   latitude: 37.78825,
   longitude: -122.4324,
-  images: [
-    'https://via.placeholder.com/400x300',
-    'https://via.placeholder.com/400x300',
-    'https://via.placeholder.com/400x300',
-  ],
-  services: [
-    {
-      name: 'Full-Service Catering',
-      description: 'Complete catering service including setup and cleanup',
-      price: 'From $25 per person',
-    },
-    {
-      name: 'Buffet Service',
-      description: 'Self-service buffet setup with variety of options',
-      price: 'From $18 per person',
-    },
-    {
-      name: 'Cocktail Reception',
-      description: 'Hors d\'oeuvres and drinks service',
-      price: 'From $15 per person',
-    },
-  ],
+  address: '123 Main St, San Francisco, CA 94105',
+  contact_phone: '+1234567890',
+  contact_email: 'info@gourmetcatering.com',
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString()
 };
 
-export default function VendorDetailsScreen({ route, navigation }) {
-  const { vendor } = route.params;
+// Add mock services data
+const MOCK_SERVICES = [
+  {
+    id: '123e4567-e89b-12d3-a456-426614174001',
+    vendor_id: MOCK_VENDOR.id,
+    name: 'Full-Service Catering',
+    description: 'Complete catering service including setup and cleanup',
+    price: 2500,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: '123e4567-e89b-12d3-a456-426614174002',
+    vendor_id: MOCK_VENDOR.id,
+    name: 'Buffet Service',
+    description: 'Self-service buffet setup with variety of options',
+    price: 1800,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: '123e4567-e89b-12d3-a456-426614174003',
+    vendor_id: MOCK_VENDOR.id,
+    name: 'Cocktail Reception',
+    description: 'Hors d\'oeuvres and drinks service',
+    price: 1500,
+    created_at: new Date().toISOString(),
+  },
+];
+
+const VendorDetailsScreen = ({ route, navigation }) => {
+  const [vendor, setVendor] = useState(MOCK_VENDOR);
+  const [vendorImages, setVendorImages] = useState([]);
+  const [vendorServices, setVendorServices] = useState([]);
+  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [availability, setAvailability] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedServices, setSelectedServices] = useState([]);
+  const [totalPrice, setTotalPrice] = useState(0);
 
   useEffect(() => {
-    checkIfSaved();
-  }, []);
+    const fetchVendorData = async () => {
+      try {
+        setLoading(true);
+        let vendorId;
+        
+        // Safely get vendorId from route params or use mock
+        if (route.params?.vendorId) {
+          vendorId = route.params.vendorId;
+        } else {
+          // Use mock data if no vendorId provided
+          setVendor(MOCK_VENDOR);
+          setVendorImages([MOCK_VENDOR.image_url]);
+          setVendorServices(MOCK_SERVICES); // Use mock services
+          return;
+        }
+
+        // Fetch vendor details
+        const { data: vendorData, error: vendorError } = await supabase
+          .from('vendors')
+          .select('*')
+          .eq('id', vendorId)
+          .single();
+
+        if (vendorError) {
+          console.error('Vendor fetch error:', vendorError);
+          throw vendorError;
+        }
+
+        if (!vendorData) {
+          setVendor(MOCK_VENDOR);
+          return;
+        }
+
+        // Fetch vendor images
+        const { data: imagesData, error: imagesError } = await supabase
+          .from('vendor_images')
+          .select('image_url')
+          .eq('vendor_id', vendorId)
+          .order('is_primary', { ascending: false });
+
+        if (imagesError) {
+          console.error('Images fetch error:', imagesError);
+        }
+
+        // Fetch vendor services
+        const { data: servicesData, error: servicesError } = await supabase
+          .from('vendor_services')
+          .select('*')
+          .eq('vendor_id', vendorId);
+
+        if (servicesError) {
+          console.error('Services fetch error:', servicesError);
+        }
+
+        setVendor(vendorData);
+        setVendorImages(imagesData?.map(img => img.image_url) || [vendorData.image_url]);
+        setVendorServices(servicesData || MOCK_SERVICES); // Fallback to mock services
+      } catch (error) {
+        console.error('Error fetching vendor data:', error);
+        Alert.alert('Error', 'Failed to load vendor details');
+        setVendor(MOCK_VENDOR);
+        setVendorServices(MOCK_SERVICES); // Use mock services on error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVendorData();
+  }, [route.params]);
+
+  useEffect(() => {
+    if (vendor?.id && user?.id) {
+      checkIfSaved();
+      fetchAvailability();
+    }
+  }, [vendor?.id, user?.id]);
 
   const checkIfSaved = async () => {
+    if (!user?.id || !vendor?.id) return;
+
     try {
       const { data, error } = await supabase
         .from('saved_vendors')
         .select('id')
-        .match({ user_id: user.id, vendor_id: vendor.id })
-        .single();
+        .eq('user_id', user.id)
+        .eq('vendor_id', vendor.id)
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error) {
+        console.error('Error checking saved status:', error);
+        return;
+      }
+
       setIsSaved(!!data);
     } catch (error) {
       console.error('Error checking saved status:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -97,137 +199,158 @@ export default function VendorDetailsScreen({ route, navigation }) {
   };
 
   const handleBookNow = () => {
-    navigation.navigate('BookingForm', { vendor });
+    if (!selectedDate) {
+      Alert.alert('Select Date', 'Please select an available date first');
+      return;
+    }
+
+    if (selectedServices.length === 0) {
+      Alert.alert('Select Services', 'Please select at least one service before booking');
+      return;
+    }
+
+    // Find the availability for the selected date
+    const dateAvailability = availability.find(a => a.date === selectedDate);
+    
+    // If we're using mock data (no availability records), consider all dates available
+    if (availability.length === 0) {
+      // Navigate to BookingForm directly
+      navigation.navigate('BookingForm', { 
+        vendor,
+        selectedDate,
+        availableSlots: ['09:00', '10:00', '11:00', '14:00', '15:00'],
+        selectedServices: vendorServices.filter(service => selectedServices.includes(service.id)),
+        totalPrice,
+      });
+      return;
+    }
+
+    // Check real availability data
+    if (!dateAvailability || !dateAvailability.is_available) {
+      Alert.alert('Not Available', 'Please select an available date');
+      return;
+    }
+
+    // Navigate to BookingForm directly
+    navigation.navigate('BookingForm', { 
+      vendor,
+      selectedDate,
+      availableSlots: dateAvailability.available_slots,
+      selectedServices: vendorServices.filter(service => selectedServices.includes(service.id)),
+      totalPrice,
+    });
   };
 
+  const fetchAvailability = async () => {
+    if (!vendor?.id) return;
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { data, error } = await supabase
+        .from('vendor_availability')
+        .select('*')
+        .eq('vendor_id', vendor.id)
+        .gte('date', today)
+        .order('date');
+
+      if (error) {
+        console.error('Availability fetch error:', error);
+        // When there's an error, we'll use empty availability array
+        // This will make the calendar treat all dates as available
+        setAvailability([]);
+        return;
+      }
+
+      setAvailability(data || []);
+    } catch (error) {
+      console.error('Error fetching availability:', error);
+      setAvailability([]);
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      const result = await Share.share({
+        message: `Check out ${vendor.name} on our app!`,
+        url: `vendorapp://vendor/${vendor.id}`,
+        title: vendor.name,
+      });
+    } catch (error) {
+      Alert.alert('Error', 'Failed to share vendor');
+    }
+  };
+
+  const handleServiceSelection = (services, total) => {
+    setSelectedServices(services);
+    setTotalPrice(total);
+  };
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!vendor) {
+    return <ErrorMessage message="Vendor not found" />;
+  }
+
   return (
-    <View style={styles.container}>
-      {/* Header with Back Button */}
+    <ScrollView style={styles.container}>
+      <ImageGallery images={vendorImages} />
+      
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Icon name="arrow-back" color={colors.background} size={24} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={toggleSave}
-          disabled={loading}
-        >
-          <Icon 
-            name={isSaved ? "favorite" : "favorite-border"} 
-            color={colors.background}
-            size={24}
-          />
-        </TouchableOpacity>
-        {vendor.badge && (
-          <View style={styles.badgeContainer}>
-            <Text style={styles.badgeText}>{vendor.badge}</Text>
-          </View>
-        )}
-      </View>
-
-      <ScrollView>
-        {/* Image Gallery */}
-        <View style={styles.imageContainer}>
-          <ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={(e) => {
-              const newIndex = Math.round(
-                e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width
-              );
-              setActiveImageIndex(newIndex);
-            }}
-          >
-            {vendor.images?.map((image, index) => (
-              <Image
-                key={index}
-                source={{ uri: image }}
-                style={styles.image}
-                resizeMode="cover"
-              />
-            ))}
-          </ScrollView>
-          {/* Image Pagination Dots */}
-          <View style={styles.pagination}>
-            {vendor.images?.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.paginationDot,
-                  index === activeImageIndex && styles.paginationDotActive,
-                ]}
-              />
-            ))}
-          </View>
-        </View>
-
-        {/* Vendor Info */}
-        <View style={styles.infoContainer}>
+        <View style={styles.titleContainer}>
           <Text style={styles.vendorName}>{vendor.name}</Text>
-          <Text style={styles.vendorCategory}>{vendor.category}</Text>
-          
-          <View style={styles.ratingContainer}>
-            <Icon name="star" color={colors.primary} size={20} />
-            <Text style={styles.rating}>{vendor.rating}</Text>
-            <Text style={styles.reviews}>({vendor.reviews} reviews)</Text>
-            <Text style={styles.priceRange}>{vendor.priceRange}</Text>
-          </View>
-
-          <Text style={styles.description}>{vendor.description}</Text>
-
-          {/* Services Section */}
-          <Text style={styles.sectionTitle}>Services</Text>
-          {vendor.services?.map((service, index) => (
-            <Card key={index} containerStyle={styles.serviceCard}>
-              <Text style={styles.serviceTitle}>{service.name}</Text>
-              <Text style={styles.serviceDescription}>{service.description}</Text>
-              <Text style={styles.servicePrice}>{service.price}</Text>
-            </Card>
-          ))}
-
-          {/* Location Section */}
-          <Text style={styles.sectionTitle}>Location</Text>
-          <Text style={styles.address}>{vendor.address}</Text>
-          <View style={styles.mapContainer}>
-            <MapView
-              provider={PROVIDER_GOOGLE}
-              style={styles.map}
-              initialRegion={{
-                latitude: vendor.latitude,
-                longitude: vendor.longitude,
-                latitudeDelta: 0.01,
-                longitudeDelta: 0.01,
-              }}
-            >
-              <Marker
-                coordinate={{
-                  latitude: vendor.latitude,
-                  longitude: vendor.longitude,
-                }}
-                title={vendor.name}
+          <View style={styles.actions}>
+            <TouchableOpacity onPress={toggleSave}>
+              <Icon 
+                name={isSaved ? 'favorite' : 'favorite-border'}
+                color={colors.primary}
+                size={24}
               />
-            </MapView>
+            </TouchableOpacity>
+            <ShareButton onPress={handleShare} />
           </View>
         </View>
-      </ScrollView>
-
-      {/* Book Now Button */}
-      <View style={styles.footer}>
-        <Button
-          title="Book Now"
-          onPress={handleBookNow}
-          buttonStyle={styles.bookButton}
-          containerStyle={styles.bookButtonContainer}
-          icon={<Icon name="event" color={colors.background} style={styles.bookIcon} />}
-        />
+        
+        <View style={styles.ratingContainer}>
+          <Icon name="star" color={colors.primary} size={20} />
+          <Text style={styles.rating}>{vendor.rating}</Text>
+          <Text style={styles.reviews}>({vendor.reviews_count} reviews)</Text>
+          <Text style={styles.priceRange}>{vendor.price_range}</Text>
+        </View>
       </View>
-    </View>
+
+      <Card containerStyle={styles.section}>
+        <Text style={styles.sectionTitle}>Availability</Text>
+        <AvailabilityCalendar
+          availability={availability}
+          selectedDate={selectedDate}
+          onDateSelect={setSelectedDate}
+        />
+      </Card>
+
+      <Card containerStyle={styles.section}>
+        <Text style={styles.sectionTitle}>Services & Pricing</Text>
+        <PricingCalculator
+          services={vendorServices}
+          onServiceSelect={handleServiceSelection}
+        />
+      </Card>
+
+      <Button
+        title="Book Now"
+        onPress={handleBookNow}
+        disabled={!selectedDate || selectedServices.length === 0}
+        containerStyle={styles.bookButton}
+        buttonStyle={styles.bookButtonStyle}
+        titleStyle={styles.bookButtonText}
+        disabledStyle={styles.bookButtonDisabled}
+        disabledTitleStyle={styles.bookButtonDisabledText}
+      />
+    </ScrollView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -235,80 +358,50 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1,
+    padding: spacing.md,
+  },
+  titleContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: spacing.lg,
-    paddingTop: spacing.xl,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
     alignItems: 'center',
-  },
-  saveButton: {
-    position: 'absolute',
-    right: spacing.md,
-    top: spacing.xl,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  badgeContainer: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: 12,
-  },
-  badgeText: {
-    ...typography.caption,
-    color: colors.background,
-    fontWeight: 'bold',
-  },
-  imageContainer: {
-    height: 300,
-  },
-  image: {
-    width: Dimensions.get('window').width,
-    height: 300,
-  },
-  pagination: {
-    position: 'absolute',
-    bottom: spacing.md,
-    flexDirection: 'row',
-    alignSelf: 'center',
-  },
-  paginationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
-    marginHorizontal: 4,
-  },
-  paginationDotActive: {
-    backgroundColor: colors.primary,
-  },
-  infoContainer: {
-    padding: spacing.lg,
   },
   vendorName: {
     ...typography.h1,
-    marginBottom: spacing.xs,
+    color: colors.text,
   },
-  vendorCategory: {
-    ...typography.body,
-    color: colors.textLight,
+  actions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  section: {
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    borderRadius: 12,
+    elevation: 2,
+  },
+  sectionTitle: {
+    ...typography.h2,
     marginBottom: spacing.sm,
+  },
+  bookButton: {
+    margin: spacing.md,
+  },
+  bookButtonStyle: {
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingVertical: spacing.md,
+  },
+  bookButtonText: {
+    ...typography.h3,
+    color: colors.white,
+    fontWeight: 'bold',
+  },
+  bookButtonDisabled: {
+    backgroundColor: colors.primaryLight,
+    opacity: 0.6,
+  },
+  bookButtonDisabledText: {
+    color: colors.white,
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -329,62 +422,48 @@ const styles = StyleSheet.create({
     color: colors.primary,
     marginLeft: 'auto',
   },
-  description: {
-    ...typography.body,
-    lineHeight: 24,
-    marginBottom: spacing.xl,
-  },
-  sectionTitle: {
-    ...typography.h2,
-    marginBottom: spacing.md,
-  },
-  serviceCard: {
+  serviceItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: spacing.md,
+    backgroundColor: colors.surface,
     borderRadius: 8,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  selectedService: {
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
+  },
+  serviceInfo: {
+    flex: 1,
+    marginRight: spacing.md,
   },
   serviceTitle: {
     ...typography.h3,
+    fontWeight: 'bold',
+    color: colors.text,
     marginBottom: spacing.xs,
+  },
+  selectedServiceTitle: {
+    color: colors.white,
   },
   serviceDescription: {
     ...typography.body,
     color: colors.textLight,
-    marginBottom: spacing.sm,
+  },
+  selectedServiceDescription: {
+    color: colors.white,
   },
   servicePrice: {
-    ...typography.body,
+    ...typography.h3,
     color: colors.primary,
     fontWeight: 'bold',
   },
-  address: {
-    ...typography.body,
-    color: colors.textLight,
-    marginBottom: spacing.md,
+  selectedServicePrice: {
+    color: colors.white,
   },
-  mapContainer: {
-    height: 200,
-    borderRadius: 8,
-    overflow: 'hidden',
-    marginBottom: spacing.xl,
-  },
-  map: {
-    flex: 1,
-  },
-  footer: {
-    padding: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.background,
-  },
-  bookButtonContainer: {
-    width: '100%',
-  },
-  bookButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    paddingVertical: spacing.md,
-  },
-  bookIcon: {
-    marginRight: spacing.sm,
-  },
-}); 
+});
+
+export default VendorDetailsScreen; 
