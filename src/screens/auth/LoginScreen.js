@@ -93,7 +93,7 @@ export default function LoginScreen({ navigation }) {
 
         <TouchableOpacity
           onPress={() => navigation.navigate('ForgotPassword')}
-          style={styles.forgotPasswordButton}
+          style={styles.forgotPassword}
         >
           <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
         </TouchableOpacity>
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   buttonContainer: {
     marginVertical: spacing.md,
   },
-  forgotPasswordButton: {
+  forgotPassword: {
     alignItems: 'center',
   },
   forgotPasswordText: {

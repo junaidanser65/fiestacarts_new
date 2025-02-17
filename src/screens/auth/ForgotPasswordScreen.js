@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, Alert } from 'react-native';
 import { Button, Input, Icon } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
 import { useAuth } from '../../contexts/AuthContext';
@@ -9,7 +9,6 @@ export default function ForgotPasswordScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
 
   const handleResetPassword = async () => {
     if (!email) {
@@ -19,13 +18,21 @@ export default function ForgotPasswordScreen({ navigation }) {
 
     setLoading(true);
     setError('');
-    setSuccess(false);
 
     try {
       await resetPassword(email);
-      setSuccess(true);
+      Alert.alert(
+        'Reset Link Sent',
+        'Please check your email for password reset instructions.',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate('Login'),
+          },
+        ]
+      );
     } catch (err) {
-      setError(err.message || 'Failed to send reset email');
+      setError(err.message || 'Failed to send reset link');
     } finally {
       setLoading(false);
     }
@@ -34,15 +41,9 @@ export default function ForgotPasswordScreen({ navigation }) {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Icon name="arrow-back" color={colors.text} size={24} />
-        </TouchableOpacity>
         <Text style={styles.title}>Reset Password</Text>
         <Text style={styles.subtitle}>
-          Enter your email address and we'll send you instructions to reset your password
+          Enter your email address and we'll send you instructions to reset your password.
         </Text>
       </View>
 
@@ -53,50 +54,30 @@ export default function ForgotPasswordScreen({ navigation }) {
           onChangeText={(text) => {
             setEmail(text);
             setError('');
-            setSuccess(false);
           }}
           leftIcon={<Icon name="email" color={colors.primary} size={20} />}
           autoCapitalize="none"
           keyboardType="email-address"
           containerStyle={styles.inputContainer}
           inputContainerStyle={styles.input}
-          disabled={loading}
+          errorMessage={error}
         />
 
-        {error ? (
-          <Text style={styles.errorText}>{error}</Text>
-        ) : success ? (
-          <Text style={styles.successText}>
-            Reset instructions have been sent to your email
-          </Text>
-        ) : null}
-
         <Button
-          title={success ? "Resend Email" : "Send Reset Link"}
+          title="Send Reset Link"
           onPress={handleResetPassword}
           loading={loading}
           buttonStyle={styles.resetButton}
           containerStyle={styles.buttonContainer}
         />
 
-        <TouchableOpacity
-          style={styles.loginLink}
+        <Button
+          title="Back to Login"
+          type="clear"
           onPress={() => navigation.navigate('Login')}
-        >
-          <Text style={styles.loginText}>Back to Login</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.helpContainer}>
-        <Text style={styles.helpText}>
-          If you're still having trouble, please contact{' '}
-          <Text 
-            style={styles.supportLink}
-            onPress={() => navigation.navigate('Support')}
-          >
-            customer support
-          </Text>
-        </Text>
+          titleStyle={styles.backButtonText}
+          containerStyle={styles.buttonContainer}
+        />
       </View>
     </ScrollView>
   );
@@ -109,24 +90,25 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   header: {
+    alignItems: 'center',
     marginVertical: spacing.xl,
-  },
-  backButton: {
-    marginBottom: spacing.lg,
   },
   title: {
     ...typography.h1,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   subtitle: {
     ...typography.body,
     color: colors.textLight,
+    textAlign: 'center',
+    marginHorizontal: spacing.xl,
   },
   form: {
-    marginBottom: spacing.xl,
+    marginTop: spacing.xl,
   },
   inputContainer: {
     paddingHorizontal: 0,
+    marginBottom: spacing.md,
   },
   input: {
     borderWidth: 1,
@@ -134,44 +116,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: spacing.md,
   },
-  errorText: {
-    ...typography.caption,
-    color: colors.error,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  successText: {
-    ...typography.caption,
-    color: colors.success,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
   resetButton: {
     backgroundColor: colors.primary,
     borderRadius: 8,
     paddingVertical: spacing.md,
   },
   buttonContainer: {
-    marginVertical: spacing.md,
+    marginVertical: spacing.sm,
   },
-  loginLink: {
-    alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  loginText: {
-    ...typography.body,
-    color: colors.primary,
-  },
-  helpContainer: {
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-  },
-  helpText: {
-    ...typography.caption,
-    textAlign: 'center',
-    color: colors.textLight,
-  },
-  supportLink: {
+  backButtonText: {
     color: colors.primary,
   },
 }); 

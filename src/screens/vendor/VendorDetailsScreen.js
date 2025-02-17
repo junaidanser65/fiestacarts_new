@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, Image, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Text, ScrollView, Image, TouchableOpacity, Dimensions, Alert } from 'react-native';
 import { Button, Icon, Card } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 // Mock data - replace with API call later
 const MOCK_VENDOR = {
@@ -42,7 +44,57 @@ const MOCK_VENDOR = {
 
 export default function VendorDetailsScreen({ route, navigation }) {
   const { vendor } = route.params;
+  const { user } = useAuth();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [isSaved, setIsSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkIfSaved();
+  }, []);
+
+  const checkIfSaved = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('saved_vendors')
+        .select('id')
+        .match({ user_id: user.id, vendor_id: vendor.id })
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      setIsSaved(!!data);
+    } catch (error) {
+      console.error('Error checking saved status:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleSave = async () => {
+    try {
+      if (isSaved) {
+        const { error } = await supabase
+          .from('saved_vendors')
+          .delete()
+          .match({ user_id: user.id, vendor_id: vendor.id });
+
+        if (error) throw error;
+        setIsSaved(false);
+        Alert.alert('Success', 'Vendor removed from saved list');
+      } else {
+        const { error } = await supabase
+          .from('saved_vendors')
+          .insert([{ user_id: user.id, vendor_id: vendor.id }]);
+
+        if (error) throw error;
+        setIsSaved(true);
+        Alert.alert('Success', 'Vendor saved to your list');
+      }
+    } catch (error) {
+      console.error('Error toggling save:', error);
+      Alert.alert('Error', 'Failed to update saved vendors');
+    }
+  };
 
   const handleBookNow = () => {
     navigation.navigate('BookingForm', { vendor });
@@ -57,6 +109,17 @@ export default function VendorDetailsScreen({ route, navigation }) {
           onPress={() => navigation.goBack()}
         >
           <Icon name="arrow-back" color={colors.background} size={24} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.saveButton}
+          onPress={toggleSave}
+          disabled={loading}
+        >
+          <Icon 
+            name={isSaved ? "favorite" : "favorite-border"} 
+            color={colors.background}
+            size={24}
+          />
         </TouchableOpacity>
         {vendor.badge && (
           <View style={styles.badgeContainer}>
@@ -187,6 +250,17 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveButton: {
+    position: 'absolute',
+    right: spacing.md,
+    top: spacing.xl,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
   },

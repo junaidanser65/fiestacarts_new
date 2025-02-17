@@ -10,6 +10,8 @@ import WelcomeScreen from '../screens/auth/WelcomeScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import SignupScreen from '../screens/auth/SignupScreen';
 import EmailVerificationScreen from '../screens/auth/EmailVerificationScreen';
+import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
+import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 import MainDashboardScreen from '../screens/dashboard/MainDashboardScreen';
 import ProfileScreen from '../screens/profile/UserProfileScreen';
 import BookingCartScreen from '../screens/booking/BookingCartScreen';
@@ -29,6 +31,11 @@ import SupportScreen from '../screens/profile/SupportScreen';
 import AboutScreen from '../screens/profile/AboutScreen';
 import LoadingScreen from '../screens/common/LoadingScreen';
 import FullMapScreen from '../screens/map/FullMapScreen';
+import SavedVendorsScreen from '../screens/profile/SavedVendorsScreen';
+import SearchFiltersScreen from '../screens/vendor/SearchFiltersScreen';
+import VendorSearchScreen from '../screens/vendor/VendorSearchScreen';
+import AddReviewScreen from '../screens/vendor/AddReviewScreen';
+import EditReviewScreen from '../screens/vendor/EditReviewScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -106,6 +113,8 @@ export default function AppNavigator() {
                 gestureEnabled: false,
               }}
             />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
           </>
         ) : (
           // Main App Stack
@@ -234,6 +243,49 @@ export default function AppNavigator() {
               options={{
                 headerShown: true,
                 headerTitle: 'About',
+                headerBackTitle: 'Back',
+              }}
+            />
+            <Stack.Screen
+              name="SavedVendors"
+              component={SavedVendorsScreen}
+              options={{
+                headerShown: true,
+                headerTitle: 'Saved Vendors',
+                headerBackTitle: 'Back',
+              }}
+            />
+            <Stack.Screen
+              name="SearchFilters"
+              component={SearchFiltersScreen}
+              options={{
+                headerShown: true,
+                headerTitle: 'Search Filters',
+                headerBackTitle: 'Back',
+              }}
+            />
+            <Stack.Screen
+              name="VendorSearch"
+              component={VendorSearchScreen}
+              options={{
+                headerShown: true,
+                headerTitle: 'Search Vendors',
+                headerBackTitle: 'Back',
+              }}
+            />
+            <Stack.Screen
+              name="AddReview"
+              component={AddReviewScreen}
+              options={{
+                headerTitle: 'Add Review',
+                headerBackTitle: 'Back',
+              }}
+            />
+            <Stack.Screen
+              name="EditReview"
+              component={EditReviewScreen}
+              options={{
+                headerTitle: 'Edit Review',
                 headerBackTitle: 'Back',
               }}
             />

@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { StyleSheet, View, Text, Dimensions, ScrollView, TouchableOpacity, Animated } from 'react-native';
+import { StyleSheet, View, Text, Dimensions, ScrollView, TouchableOpacity, Animated, SafeAreaView, FlatList } from 'react-native';
 import { Button, SearchBar, Card, Icon } from '@rneui/themed';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { colors, spacing, typography } from '../../styles/theme';
 import { useAuth } from '../../contexts/AuthContext';
+import VendorCard from '../vendor/components/VendorCard';
 
 // Mock data - replace with API call later
 const MOCK_CATEGORIES = [
@@ -20,9 +21,9 @@ const MOCK_VENDORS = [
     name: 'Gourmet Catering Co.',
     category: 'Catering',
     rating: 4.8,
-    reviews: 124,
-    priceRange: '$$',
-    image: 'https://via.placeholder.com/300x200',
+    reviews_count: 124,
+    price_range: '$$',
+    image_url: 'https://via.placeholder.com/300x200',
     latitude: 37.78825,
     longitude: -122.4324,
     description: 'Premium catering services for all types of events.',
@@ -32,9 +33,9 @@ const MOCK_VENDORS = [
     name: 'Elegant Events Venue',
     category: 'Venues',
     rating: 4.9,
-    reviews: 89,
-    priceRange: '$$$',
-    image: 'https://via.placeholder.com/300x200',
+    reviews_count: 89,
+    price_range: '$$$',
+    image_url: 'https://via.placeholder.com/300x200',
     latitude: 37.78925,
     longitude: -122.4344,
     description: 'Luxurious venue for weddings and corporate events.',
@@ -44,9 +45,9 @@ const MOCK_VENDORS = [
     name: 'Capture Moments',
     category: 'Photography',
     rating: 4.7,
-    reviews: 156,
-    priceRange: '$$',
-    image: 'https://via.placeholder.com/300x200',
+    reviews_count: 156,
+    price_range: '$$',
+    image_url: 'https://via.placeholder.com/300x200',
     latitude: 37.78725,
     longitude: -122.4354,
     description: 'Professional photography services for your special moments.',
@@ -99,19 +100,10 @@ const FEATURED_VENDORS = [
   },
 ];
 
-const SECTIONS = [
-  { id: 'offers', title: 'Special Offers', icon: 'local-offer' },
-  { id: 'categories', title: 'Categories', icon: 'category' },
-  { id: 'featured', title: 'Featured', icon: 'star' },
-  { id: 'vendors', title: 'All Vendors', icon: 'store' },
-  { id: 'map', title: 'Map View', icon: 'map' },
-];
-
 export default function MainDashboardScreen({ navigation }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [showFAB, setShowFAB] = useState(true);
   const [region, setRegion] = useState({
     latitude: 37.78825,
     longitude: -122.4324,
@@ -120,33 +112,6 @@ export default function MainDashboardScreen({ navigation }) {
   });
 
   const scrollViewRef = useRef(null);
-  const sectionRefs = {
-    offers: useRef(null),
-    categories: useRef(null),
-    featured: useRef(null),
-    vendors: useRef(null),
-    map: useRef(null),
-  };
-
-  const handleScroll = (event) => {
-    const currentOffset = event.nativeEvent.contentOffset.y;
-    setShowFAB(currentOffset < 100);
-  };
-
-  const scrollToSection = (sectionId) => {
-    if (sectionRefs[sectionId]?.current) {
-      sectionRefs[sectionId].current.measureLayout(
-        scrollViewRef.current,
-        (x, y) => {
-          scrollViewRef.current.scrollTo({
-            y: y - 100, // Offset to account for header
-            animated: true,
-          });
-        },
-        () => console.log('Failed to measure'),
-      );
-    }
-  };
 
   const handleSearch = (text) => {
     setSearch(text);
@@ -168,18 +133,19 @@ export default function MainDashboardScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <ScrollView
         ref={scrollViewRef}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
       >
-        {/* Welcome Header */}
         <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <View>
-              <Text style={styles.welcomeText}>Welcome back,</Text>
-              <Text style={styles.userName}>{user.firstName}!</Text>
+          <View style={styles.welcomeContainer}>
+            <View style={styles.welcomeTextContainer}>
+              <Text style={styles.welcomeText}>
+                {loading ? 'Loading...' : 'Welcome back,'}
+              </Text>
+              <Text style={styles.nameText}>
+                {loading ? '' : user?.first_name ? `${user.first_name}!` : 'Guest!'}
+              </Text>
             </View>
             <TouchableOpacity 
               style={styles.notificationButton}
@@ -192,19 +158,50 @@ export default function MainDashboardScreen({ navigation }) {
 
         {/* Search Bar */}
         <View style={styles.searchWrapper}>
-          <SearchBar
-            placeholder="Search vendors..."
-            onChangeText={handleSearch}
-            value={search}
-            containerStyle={styles.searchContainer}
-            inputContainerStyle={styles.searchInputContainer}
-            platform="default"
-          />
+          <TouchableOpacity 
+            style={styles.searchBar}
+            onPress={() => navigation.navigate('VendorSearch')}
+          >
+            <Icon name="search" color={colors.textLight} />
+            <Text style={styles.searchText}>Search vendors...</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Categories */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Categories</Text>
+          </View>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoriesContainer}
+          >
+            {MOCK_CATEGORIES.map((category) => (
+              <TouchableOpacity
+                key={category.id}
+                style={styles.categoryItem}
+                onPress={() => navigation.navigate('VendorSearch', {
+                  filters: { categories: [category.name] }
+                })}
+              >
+                <View style={styles.categoryIconContainer}>
+                  <Icon name={category.icon} size={32} color={colors.primary} />
+                </View>
+                <Text style={styles.categoryName} numberOfLines={1}>{category.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
 
         {/* Special Offers */}
-        <View style={styles.section} ref={sectionRefs.offers}>
-          <Text style={styles.sectionTitle}>Special Offers</Text>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Special Offers</Text>
+            <TouchableOpacity>
+              <Text style={styles.seeAllText}>View All</Text>
+            </TouchableOpacity>
+          </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {SPECIAL_OFFERS.map((offer) => (
               <Card key={offer.id} containerStyle={styles.offerCard}>
@@ -224,162 +221,93 @@ export default function MainDashboardScreen({ navigation }) {
           </ScrollView>
         </View>
 
-        {/* Categories */}
-        <View style={styles.section} ref={sectionRefs.categories}>
-          <Text style={styles.sectionTitle}>Categories</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {MOCK_CATEGORIES.map((category) => (
-              <TouchableOpacity
-                key={category.id}
-                style={[
-                  styles.categoryItem,
-                  selectedCategory === category.name && styles.selectedCategory,
-                ]}
-                onPress={() => handleCategoryPress(category.name)}
-              >
-                <View style={[
-                  styles.categoryIcon,
-                  selectedCategory === category.name && styles.selectedCategoryIcon,
-                ]}>
-                  <Icon 
-                    name={category.icon} 
-                    color={selectedCategory === category.name ? colors.background : colors.primary} 
-                    size={24} 
-                  />
-                </View>
-                <Text style={[
-                  styles.categoryName,
-                  selectedCategory === category.name && styles.selectedCategoryText,
-                ]}>
-                  {category.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
         {/* Featured Vendors */}
-        <View style={styles.section} ref={sectionRefs.featured}>
-          <Text style={styles.sectionTitle}>Featured Vendors</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {FEATURED_VENDORS.map((vendor) => (
-              <TouchableOpacity
-                key={vendor.id}
-                onPress={() => handleVendorPress(vendor)}
-              >
-                <Card containerStyle={styles.featuredCard}>
-                  <Card.Image source={{ uri: vendor.image }} style={styles.featuredImage}>
-                    <View style={styles.badgeContainer}>
-                      <Text style={styles.badgeText}>{vendor.badge}</Text>
-                    </View>
-                  </Card.Image>
-                  <View style={styles.featuredInfo}>
-                    <Text style={styles.vendorName}>{vendor.name}</Text>
-                    <Text style={styles.vendorCategory}>{vendor.category}</Text>
-                    <View style={styles.vendorDetails}>
-                      <View style={styles.ratingContainer}>
-                        <Icon name="star" color={colors.primary} size={16} />
-                        <Text style={styles.rating}>{vendor.rating}</Text>
-                        <Text style={styles.reviews}>({vendor.reviews} reviews)</Text>
-                      </View>
-                      <Text style={styles.priceRange}>{vendor.priceRange}</Text>
-                    </View>
-                  </View>
-                </Card>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* All Vendors */}
-        <View style={styles.section} ref={sectionRefs.vendors}>
-          <Text style={styles.sectionTitle}>
-            {selectedCategory || 'All'} Vendors
-          </Text>
-          {filteredVendors.length > 0 ? (
-            filteredVendors.map((vendor) => (
-              <TouchableOpacity
-                key={vendor.id}
-                onPress={() => handleVendorPress(vendor)}
-                activeOpacity={0.7}
-              >
-                <Card containerStyle={styles.vendorCard}>
-                  <Card.Image
-                    source={{ uri: vendor.image }}
-                    style={styles.vendorImage}
-                  />
-                  <View style={styles.vendorInfo}>
-                    <Text style={styles.vendorName}>{vendor.name}</Text>
-                    <Text style={styles.vendorCategory}>{vendor.category}</Text>
-                    <View style={styles.vendorDetails}>
-                      <View style={styles.ratingContainer}>
-                        <Icon name="star" color={colors.primary} size={16} />
-                        <Text style={styles.rating}>{vendor.rating}</Text>
-                        <Text style={styles.reviews}>({vendor.reviews} reviews)</Text>
-                      </View>
-                      <Text style={styles.priceRange}>{vendor.priceRange}</Text>
-                    </View>
-                  </View>
-                </Card>
-              </TouchableOpacity>
-            ))
-          ) : (
-            <View style={styles.emptyState}>
-              <Icon name="search-off" size={48} color={colors.textLight} />
-              <Text style={styles.emptyStateText}>No vendors found</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Map View */}
-        <View style={styles.mapContainer} ref={sectionRefs.map}>
-          <View style={styles.mapHeader}>
-            <Text style={styles.mapTitle}>Nearby Vendors</Text>
-            <Button
-              title="View Full Map"
-              type="clear"
-              onPress={() => navigation.navigate('FullMap')}
-            />
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Featured Vendors</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('VendorSearch', { filters: { featured: true } })}>
+              <Text style={styles.seeAllText}>See All</Text>
+            </TouchableOpacity>
           </View>
-          <MapView
-            provider={PROVIDER_GOOGLE}
-            style={styles.map}
-            region={region}
-            onRegionChangeComplete={setRegion}
-            showsUserLocation
-            showsMyLocationButton
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.featuredContainer}
           >
-            {[...filteredVendors, ...FEATURED_VENDORS].map((vendor) => (
-              <Marker
+            {FEATURED_VENDORS.map((vendor) => (
+              <VendorCard
                 key={vendor.id}
-                coordinate={{
-                  latitude: vendor.latitude,
-                  longitude: vendor.longitude,
+                vendor={{
+                  ...vendor,
+                  reviews_count: vendor.reviews,
+                  image_url: vendor.image,
                 }}
-                title={vendor.name}
-                description={`${vendor.category} • ${vendor.rating}⭐`}
-                onPress={() => handleVendorPress(vendor)}
+                onPress={() => navigation.navigate('VendorDetails', { vendor })}
+                featured={true}
+                style={styles.featuredVendorCard}
               />
             ))}
-          </MapView>
+          </ScrollView>
+        </View>
+
+        {/* All Vendors Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>All Vendors</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('VendorSearch')}>
+              <Text style={styles.seeAllText}>See All</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={MOCK_VENDORS}
+            horizontal={false}
+            showsVerticalScrollIndicator={false}
+            scrollEnabled={false}
+            contentContainerStyle={styles.vendorList}
+            renderItem={({ item }) => (
+              <VendorCard
+                vendor={item}
+                onPress={() => navigation.navigate('VendorDetails', { vendor: item })}
+              />
+            )}
+            keyExtractor={item => item.id}
+          />
+        </View>
+
+        {/* Map Preview */}
+        <View style={styles.section}>
+          <View style={styles.mapHeader}>
+            <Text style={styles.sectionTitle}>Nearby Vendors</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('FullMap')}>
+              <Text style={styles.seeAllText}>View Map</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.mapContainer}>
+            <MapView
+              provider={PROVIDER_GOOGLE}
+              style={styles.map}
+              initialRegion={{
+                latitude: 37.78825,
+                longitude: -122.4324,
+                latitudeDelta: 0.0922,
+                longitudeDelta: 0.0421,
+              }}
+            >
+              {MOCK_VENDORS.map((vendor) => (
+                <Marker
+                  key={vendor.id}
+                  coordinate={{
+                    latitude: vendor.latitude,
+                    longitude: vendor.longitude,
+                  }}
+                  title={vendor.name}
+                />
+              ))}
+            </MapView>
+          </View>
         </View>
       </ScrollView>
-
-      {showFAB && (
-        <View style={styles.fabContainer}>
-          {SECTIONS.map((section) => (
-            <TouchableOpacity
-              key={section.id}
-              style={styles.fabItem}
-              onPress={() => scrollToSection(section.id)}
-            >
-              <Icon name={section.icon} color={colors.background} size={20} />
-              <Text style={styles.fabText}>{section.title}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -399,19 +327,22 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
+    padding: spacing.lg,
   },
-  headerContent: {
+  welcomeContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
+  },
+  welcomeTextContainer: {
+    flex: 1,
   },
   welcomeText: {
     ...typography.body,
     color: colors.background,
     opacity: 0.8,
   },
-  userName: {
+  nameText: {
     ...typography.h1,
     color: colors.background,
     marginTop: spacing.xs,
@@ -444,18 +375,24 @@ const styles = StyleSheet.create({
     minHeight: 45,
   },
   section: {
-    marginTop: spacing.md,
-    padding: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
   },
   sectionTitle: {
     ...typography.h2,
-    marginBottom: spacing.md,
   },
   categoryItem: {
     alignItems: 'center',
     marginRight: spacing.lg,
+    width: 80,
   },
-  categoryIcon: {
+  categoryIconContainer: {
     width: 60,
     height: 60,
     borderRadius: 30,
@@ -474,6 +411,7 @@ const styles = StyleSheet.create({
   categoryName: {
     ...typography.caption,
     textAlign: 'center',
+    width: '100%',
   },
   vendorCard: {
     padding: 0,
@@ -644,27 +582,35 @@ const styles = StyleSheet.create({
   mapTitle: {
     ...typography.h3,
   },
-  fabContainer: {
-    position: 'absolute',
-    right: spacing.md,
-    bottom: spacing.xl,
-    backgroundColor: colors.primary,
-    borderRadius: 28,
-    padding: spacing.sm,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-  fabItem: {
+  searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.sm,
+    padding: spacing.md,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    elevation: 4,
   },
-  fabText: {
-    ...typography.caption,
-    color: colors.background,
+  searchText: {
+    ...typography.body,
+    color: colors.textLight,
     marginLeft: spacing.sm,
+  },
+  seeAllText: {
+    ...typography.body,
+    color: colors.primary,
+  },
+  categoriesContainer: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  vendorList: {
+    paddingHorizontal: spacing.md,
+  },
+  featuredContainer: {
+    paddingHorizontal: spacing.md,
+  },
+  featuredVendorCard: {
+    width: 280,
+    marginRight: spacing.md,
   },
 }); 

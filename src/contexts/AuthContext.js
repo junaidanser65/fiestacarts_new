@@ -20,13 +20,19 @@ export function AuthProvider({ children }) {
 
   const fetchProfile = async (userId) => {
     try {
+      console.log('Fetching profile for user:', userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return null;
+      }
+
+      console.log('Fetched profile:', data);
       return data;
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -77,6 +83,29 @@ export function AuthProvider({ children }) {
 
           const profile = await fetchProfile(session.user.id);
           
+          if (!profile) {
+            console.warn('No profile found for user:', session.user.id);
+            // Attempt to create profile if it doesn't exist
+            try {
+              const { error: createError } = await supabase
+                .from('profiles')
+                .upsert([
+                  {
+                    id: session.user.id,
+                    first_name: session.user.user_metadata?.first_name || '',
+                    last_name: session.user.user_metadata?.last_name || '',
+                    avatar_url: null,
+                  },
+                ])
+                .select()
+                .single();
+              
+              if (createError) throw createError;
+            } catch (error) {
+              console.error('Error creating profile:', error);
+            }
+          }
+
           setUser({
             ...session.user,
             ...profile,
@@ -209,6 +238,14 @@ export function AuthProvider({ children }) {
     if (error) throw error;
   };
 
+  const updatePassword = async (newPassword) => {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (error) throw error;
+  };
+
   const updateProfile = async (updates) => {
     const { error } = await supabase
       .from('profiles')
@@ -240,6 +277,7 @@ export function AuthProvider({ children }) {
       signup,
       logout,
       resetPassword,
+      updatePassword,
       updateProfile,
       signInWithGoogle,
       signInWithFacebook,
