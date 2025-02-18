@@ -1,15 +1,26 @@
 import React from 'react';
-import { StyleSheet, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Image } from 'react-native';
 import { Card, Text, Icon } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
 
-export default function VendorCard({ vendor, onPress }) {
+const VendorCard = ({ vendor, onPress }) => {
+  console.log('VendorCard rendering for:', vendor.name, 'with ID:', vendor.id);
+  
+  // Function to get the correct image source
+  const getImageSource = (imageUrl) => {
+    if (typeof imageUrl === 'string') {
+      return { uri: imageUrl };
+    }
+    return imageUrl;
+  };
+
   return (
     <TouchableOpacity onPress={onPress}>
       <Card containerStyle={styles.card}>
-        <Card.Image
+        <Image
           source={{ uri: vendor.image_url }}
           style={styles.image}
+          resizeMode="cover"
         />
         <View style={styles.content}>
           <View style={styles.header}>
@@ -29,7 +40,7 @@ export default function VendorCard({ vendor, onPress }) {
       </Card>
     </TouchableOpacity>
   );
-}
+};
 
 const styles = StyleSheet.create({
   card: {
@@ -44,6 +55,7 @@ const styles = StyleSheet.create({
   },
   image: {
     height: 150,
+    width: '100%',
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
   },
@@ -88,4 +100,6 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textLight,
   },
-}); 
+});
+
+export default VendorCard; 

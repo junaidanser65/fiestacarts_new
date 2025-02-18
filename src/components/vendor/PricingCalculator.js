@@ -3,6 +3,26 @@ import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { colors, spacing, typography } from '../../styles/theme';
 
 const PricingCalculator = ({ services = [], onServiceSelect }) => {
+  console.log('PricingCalculator received services:', services);
+  
+  if (!Array.isArray(services)) {
+    console.error('Services prop is not an array:', services);
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>Invalid services data</Text>
+      </View>
+    );
+  }
+
+  if (services.length === 0) {
+    console.log('No services available');
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>No services available</Text>
+      </View>
+    );
+  }
+
   const [selectedServices, setSelectedServices] = useState([]);
 
   useEffect(() => {
@@ -28,14 +48,6 @@ const PricingCalculator = ({ services = [], onServiceSelect }) => {
       .filter(service => selection.includes(service.id))
       .reduce((sum, service) => sum + service.price, 0);
   };
-
-  if (!services.length) {
-    return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No services available</Text>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>

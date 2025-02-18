@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, Dimensions } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Text, Dimensions, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
+import MapView, { Marker, PROVIDER_GOOGLE, Circle } from 'react-native-maps';
 import { SearchBar, Icon, Button, Card } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
+import Slider from '@react-native-community/slider';
+import { getDistance } from 'geolib';
+import Animated from 'react-native';
 
 // Using the same mock data from MainDashboardScreen
 const ALL_VENDORS = [
@@ -68,22 +71,97 @@ const ALL_VENDORS = [
   },
 ];
 
-export default function FullMapScreen({ navigation }) {
+// Add this helper function to get category icon
+const getCategoryIcon = (category) => {
+  const categoryMap = {
+    'Catering': 'restaurant',
+    'Venues': 'location-on',
+    'Photography': 'camera-alt',
+    'Music': 'music-note',
+    'Decoration': 'celebration',
+  };
+  return categoryMap[category] || 'store';
+};
+
+export default function FullMapScreen({ route, navigation }) {
+  const { userLocation, nearbyVendors } = route.params || {};
   const [search, setSearch] = useState('');
   const [selectedVendor, setSelectedVendor] = useState(null);
+  const [mapRef, setMapRef] = useState(null);
   const [region, setRegion] = useState({
-    latitude: 37.78825,
-    longitude: -122.4324,
-    latitudeDelta: 0.02,
-    longitudeDelta: 0.02,
+    latitude: userLocation?.latitude || 37.78825,
+    longitude: userLocation?.longitude || -122.4324,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
   });
+  const [radiusKm, setRadiusKm] = useState(10);
+  const [vendorsWithLocations, setVendorsWithLocations] = useState(nearbyVendors || []);
+  const [filteredVendors, setFilteredVendors] = useState(nearbyVendors || []);
 
-  const filteredVendors = ALL_VENDORS.filter(vendor =>
-    vendor.name.toLowerCase().includes(search.toLowerCase()) ||
-    vendor.category.toLowerCase().includes(search.toLowerCase())
-  );
+  // Initialize map and vendors when component mounts
+  useEffect(() => {
+    if (userLocation && nearbyVendors?.length > 0) {
+      console.log('Initializing with:', { userLocation, vendorCount: nearbyVendors.length });
+      
+      // Set initial region
+      const initialRegion = {
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      };
+      setRegion(initialRegion);
+      
+      // Set vendors
+      setVendorsWithLocations(nearbyVendors);
+      setFilteredVendors(nearbyVendors);
+
+      // Animate to user location if map is ready
+      if (mapRef) {
+        mapRef.animateToRegion(initialRegion, 1000);
+      }
+    }
+  }, [userLocation, nearbyVendors, mapRef]);
+
+  // Filter vendors based on radius and search
+  const filterVendors = () => {
+    if (!userLocation || !vendorsWithLocations.length) return;
+
+    const filtered = vendorsWithLocations.filter(vendor => {
+      // Distance filter
+      const distance = getDistance(
+        { latitude: userLocation.latitude, longitude: userLocation.longitude },
+        { latitude: vendor.latitude, longitude: vendor.longitude }
+      );
+      const isInRadius = distance <= radiusKm * 1000;
+
+      // Search filter
+      const matchesSearch = !search || 
+        vendor.name.toLowerCase().includes(search.toLowerCase()) ||
+        vendor.category.toLowerCase().includes(search.toLowerCase());
+
+      return isInRadius && matchesSearch;
+    });
+
+    setFilteredVendors(filtered);
+  };
+
+  // Handle radius change
+  const handleRadiusChange = (newRadius) => {
+    setRadiusKm(newRadius);
+  };
+
+  // Handle radius apply
+  const handleRadiusApply = () => {
+    filterVendors();
+  };
 
   const handleVendorPress = (vendor) => {
+    if (!vendor) {
+      console.error('No vendor data available');
+      return;
+    }
+
     navigation.navigate('VendorDetails', { vendor });
   };
 
@@ -97,125 +175,188 @@ export default function FullMapScreen({ navigation }) {
     });
   };
 
+  // Add console logs to debug
+  console.log('UserLocation:', userLocation);
+  console.log('Initial Vendors:', nearbyVendors?.length);
+  console.log('Current Region:', region);
+
   return (
-    <View style={styles.container}>
-      {/* Search Bar Overlay */}
-      <View style={styles.searchOverlay}>
-        <SearchBar
-          placeholder="Search vendors..."
-          onChangeText={setSearch}
-          value={search}
-          containerStyle={styles.searchContainer}
-          inputContainerStyle={styles.searchInputContainer}
-          platform="default"
-        />
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Back Button */}
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Icon name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
 
-      {/* Map */}
-      <MapView
-        provider={PROVIDER_GOOGLE}
-        style={styles.map}
-        region={region}
-        onRegionChangeComplete={setRegion}
-        showsUserLocation
-        showsMyLocationButton
-      >
-        {filteredVendors.map((vendor) => (
-          <Marker
-            key={vendor.id}
-            coordinate={{
-              latitude: vendor.latitude,
-              longitude: vendor.longitude,
+        {/* Search Bar Overlay */}
+        <View style={styles.searchOverlay}>
+          <SearchBar
+            placeholder="Search vendors..."
+            onChangeText={(text) => {
+              setSearch(text);
+              filterVendors();
             }}
-            title={vendor.name}
-            description={`${vendor.category} • ${vendor.rating}⭐`}
-            onPress={() => handleVendorPress(vendor)}
-          >
-            <View style={styles.markerContainer}>
-              <Icon 
-                name={vendor.badge ? 'star' : 'location-on'} 
-                color={colors.primary} 
-                size={24} 
-              />
-              {vendor.badge && (
-                <View style={styles.badgeContainer}>
-                  <Text style={styles.badgeText}>Featured</Text>
-                </View>
-              )}
-            </View>
-          </Marker>
-        ))}
-      </MapView>
-
-      {/* Back Button */}
-      <Button
-        icon={<Icon name="arrow-back" color={colors.text} size={24} />}
-        buttonStyle={styles.backButton}
-        onPress={() => navigation.goBack()}
-      />
-
-      {/* Selected Vendor Card */}
-      {selectedVendor && (
-        <View style={styles.vendorCardContainer}>
-          <Card containerStyle={styles.vendorCard}>
-            <View style={styles.vendorInfo}>
-              <View style={styles.vendorHeader}>
-                <View>
-                  <Text style={styles.vendorName}>{selectedVendor.name}</Text>
-                  <Text style={styles.vendorCategory}>{selectedVendor.category}</Text>
-                </View>
-                {selectedVendor.badge && (
-                  <View style={styles.badgeContainer}>
-                    <Text style={styles.badgeText}>{selectedVendor.badge}</Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.vendorDetails}>
-                <View style={styles.ratingContainer}>
-                  <Icon name="star" color={colors.primary} size={16} />
-                  <Text style={styles.rating}>{selectedVendor.rating}</Text>
-                  <Text style={styles.reviews}>({selectedVendor.reviews})</Text>
-                </View>
-                <Text style={styles.priceRange}>{selectedVendor.priceRange}</Text>
-              </View>
-              <Button
-                title="View Details"
-                onPress={() => navigation.navigate('VendorDetails', { vendor: selectedVendor })}
-                buttonStyle={styles.detailsButton}
-              />
-            </View>
-          </Card>
+            value={search}
+            containerStyle={styles.searchContainer}
+            inputContainerStyle={styles.searchInputContainer}
+            platform="default"
+          />
         </View>
-      )}
-    </View>
+
+        {/* Radius Control */}
+        <View style={styles.radiusControl}>
+          <View style={styles.radiusHeader}>
+            <Text style={styles.radiusLabel}>Search Radius: {radiusKm}km</Text>
+            <TouchableOpacity 
+              style={styles.radiusButton}
+              onPress={handleRadiusApply}
+            >
+              <Text style={styles.radiusButtonText}>Apply</Text>
+            </TouchableOpacity>
+          </View>
+          <Slider
+            style={styles.radiusSlider}
+            minimumValue={1}
+            maximumValue={50}
+            step={1}
+            value={radiusKm}
+            onValueChange={handleRadiusChange}
+            minimumTrackTintColor={colors.primary}
+            maximumTrackTintColor={colors.border}
+            thumbTintColor={colors.primary}
+          />
+        </View>
+
+        {/* Map */}
+        <MapView
+          ref={ref => setMapRef(ref)}
+          provider={PROVIDER_GOOGLE}
+          style={styles.map}
+          initialRegion={region}
+          showsUserLocation={true}
+          showsMyLocationButton={false}
+        >
+          {userLocation && (
+            <Circle
+              center={userLocation}
+              radius={radiusKm * 1000}
+              fillColor="rgba(255, 99, 71, 0.1)"
+              strokeColor="rgba(255, 99, 71, 0.3)"
+              strokeWidth={1}
+            />
+          )}
+          {filteredVendors.map((vendor) => (
+            <Marker
+              key={vendor.id}
+              coordinate={{
+                latitude: vendor.latitude,
+                longitude: vendor.longitude,
+              }}
+              title={vendor.name}
+              description={`${vendor.category} • ${vendor.rating}⭐`}
+              onPress={() => handleVendorPress(vendor)}
+            >
+              <View style={styles.markerContainer}>
+                <View style={[styles.marker, { backgroundColor: colors.white }]}>
+                  <Icon 
+                    name={getCategoryIcon(vendor.category)} 
+                    size={20} 
+                    color={colors.primary} 
+                  />
+                </View>
+                <Text style={styles.markerLabel} numberOfLines={1}>
+                  {vendor.name}
+                </Text>
+              </View>
+            </Marker>
+          ))}
+        </MapView>
+
+        {/* My Location Button */}
+        <TouchableOpacity 
+          style={styles.myLocationButton}
+          onPress={() => {
+            if (userLocation && mapRef) {
+              mapRef.animateToRegion({
+                ...userLocation,
+                latitudeDelta: 0.0922,
+                longitudeDelta: 0.0421,
+              }, 1000);
+            }
+          }}
+        >
+          <Icon name="my-location" size={24} color={colors.primary} />
+        </TouchableOpacity>
+
+        {/* Selected Vendor Card */}
+        {selectedVendor && (
+          <View style={styles.vendorCardContainer}>
+            <Card containerStyle={styles.vendorCard}>
+              <View style={styles.vendorInfo}>
+                <View style={styles.vendorHeader}>
+                  <View>
+                    <Text style={styles.vendorName}>{selectedVendor.name}</Text>
+                    <Text style={styles.vendorCategory}>{selectedVendor.category}</Text>
+                  </View>
+                  {selectedVendor.badge && (
+                    <View style={styles.badgeContainer}>
+                      <Text style={styles.badgeText}>{selectedVendor.badge}</Text>
+                    </View>
+                  )}
+                </View>
+                <View style={styles.vendorDetails}>
+                  <View style={styles.ratingContainer}>
+                    <Icon name="star" color={colors.primary} size={16} />
+                    <Text style={styles.rating}>{selectedVendor.rating}</Text>
+                    <Text style={styles.reviews}>({selectedVendor.reviews})</Text>
+                  </View>
+                  <Text style={styles.priceRange}>{selectedVendor.priceRange}</Text>
+                </View>
+                <Button
+                  title="View Details"
+                  onPress={() => navigation.navigate('VendorDetails', { vendor: selectedVendor })}
+                  buttonStyle={styles.detailsButton}
+                />
+              </View>
+            </Card>
+          </View>
+        )}
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  },
   container: {
     flex: 1,
+    backgroundColor: colors.background,
   },
   map: {
-    width: Dimensions.get('window').width,
-    height: Dimensions.get('window').height,
+    flex: 1,
   },
   searchOverlay: {
     position: 'absolute',
     top: spacing.lg,
-    left: 0,
-    right: 0,
+    left: spacing.lg + 50,
+    right: spacing.lg,
     zIndex: 1,
-    paddingHorizontal: spacing.md,
   },
   searchContainer: {
     backgroundColor: 'transparent',
     borderTopWidth: 0,
     borderBottomWidth: 0,
     padding: 0,
-    margin: 0,
   },
   searchInputContainer: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.white,
     borderRadius: 8,
     height: 45,
     elevation: 4,
@@ -244,18 +385,20 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    top: spacing.lg + 60,
-    left: spacing.md,
-    backgroundColor: colors.background,
+    top: spacing.lg,
+    left: spacing.lg,
+    backgroundColor: colors.white,
     borderRadius: 8,
     width: 40,
     height: 40,
-    padding: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    zIndex: 2,
   },
   vendorCardContainer: {
     position: 'absolute',
@@ -311,5 +454,86 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: 8,
     marginTop: spacing.sm,
+  },
+  radiusControl: {
+    position: 'absolute',
+    top: spacing.lg + 60,
+    left: spacing.lg,
+    right: spacing.lg,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: spacing.md,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    zIndex: 1,
+  },
+  radiusHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  radiusLabel: {
+    ...typography.body,
+    color: colors.text,
+  },
+  radiusButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: 16,
+  },
+  radiusButtonText: {
+    ...typography.button,
+    color: colors.white,
+  },
+  radiusSlider: {
+    width: '100%',
+    height: 40,
+  },
+  marker: {
+    padding: 8,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  markerLabel: {
+    ...typography.caption,
+    backgroundColor: colors.white,
+    color: colors.text,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs / 2,
+    borderRadius: 4,
+    marginTop: spacing.xs,
+    textAlign: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+  },
+  myLocationButton: {
+    position: 'absolute',
+    right: spacing.lg,
+    bottom: spacing.xl,
+    backgroundColor: colors.white,
+    borderRadius: 8,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
 }); 

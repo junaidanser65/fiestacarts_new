@@ -135,6 +135,7 @@ export default function PaymentSuccessScreen({ route, navigation }) {
             })}
             buttonStyle={styles.homeButton}
             containerStyle={styles.buttonWrapper}
+            titleStyle={styles.homeButtonText}
             type="outline"
           />
         </View>
@@ -231,6 +232,9 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     paddingVertical: spacing.md,
     borderRadius: 8,
+  },
+  homeButtonText: {
+    color: colors.primary,
   },
   icon: {
     marginBottom: spacing.md,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, Image, TouchableOpacity, Dimensions, Alert, Share } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, Image, TouchableOpacity, Dimensions, Alert, Share, Animated } from 'react-native';
 import { Button, Icon, Card } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -16,7 +16,7 @@ import BackButton from '../../components/common/BackButton';
 
 // Mock data - replace with API call later
 const MOCK_VENDOR = {
-  id: '123e4567-e89b-12d3-a456-426614174000',
+  id: '123e4567-e89b-12d3-a456-426614174001',
   name: 'Gourmet Catering Co.',
   category: 'Catering',
   description: 'Premium catering services for all types of events. Specializing in corporate events and weddings.',
@@ -33,38 +33,162 @@ const MOCK_VENDOR = {
   updated_at: new Date().toISOString()
 };
 
-// Add mock services data
-const MOCK_SERVICES = [
-  {
-    id: '123e4567-e89b-12d3-a456-426614174001',
-    vendor_id: MOCK_VENDOR.id,
-    name: 'Full-Service Catering',
-    description: 'Complete catering service including setup and cleanup',
-    price: 2500,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '123e4567-e89b-12d3-a456-426614174002',
-    vendor_id: MOCK_VENDOR.id,
-    name: 'Buffet Service',
-    description: 'Self-service buffet setup with variety of options',
-    price: 1800,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '123e4567-e89b-12d3-a456-426614174003',
-    vendor_id: MOCK_VENDOR.id,
-    name: 'Cocktail Reception',
-    description: 'Hors d\'oeuvres and drinks service',
-    price: 1500,
-    created_at: new Date().toISOString(),
-  },
-];
+// Update the MOCK_SERVICES to include services for all vendors
+const MOCK_SERVICES = {
+  // Gourmet Catering Co. services
+  '123e4567-e89b-12d3-a456-426614174001': [
+    {
+      id: '123e4567-e89b-12d3-a456-426614174101',
+      vendor_id: '123e4567-e89b-12d3-a456-426614174001',
+      name: 'Full-Service Catering',
+      description: 'Complete catering service including setup and cleanup',
+      price: 2500,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: '123e4567-e89b-12d3-a456-426614174102',
+      vendor_id: '123e4567-e89b-12d3-a456-426614174001',
+      name: 'Buffet Service',
+      description: 'Self-service buffet setup with variety of options',
+      price: 1800,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: '123e4567-e89b-12d3-a456-426614174103',
+      vendor_id: '123e4567-e89b-12d3-a456-426614174001',
+      name: 'Cocktail Reception',
+      description: 'Hors d\'oeuvres and drinks service',
+      price: 1500,
+      created_at: new Date().toISOString(),
+    },
+  ],
+  
+  // Elegant Events Venue services
+  '123e4567-e89b-12d3-a456-426614174002': [
+    {
+      id: '123e4567-e89b-12d3-a456-426614174201',
+      vendor_id: '123e4567-e89b-12d3-a456-426614174002',
+      name: 'Full Venue Rental',
+      description: 'Exclusive access to entire venue for your event',
+      price: 5000,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: '123e4567-e89b-12d3-a456-426614174202',
+      vendor_id: '123e4567-e89b-12d3-a456-426614174002',
+      name: 'Partial Venue Rental',
+      description: 'Access to main hall and garden area',
+      price: 3500,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: '123e4567-e89b-12d3-a456-426614174203',
+      vendor_id: '123e4567-e89b-12d3-a456-426614174002',
+      name: 'Basic Decoration Package',
+      description: 'Standard decoration setup for your event',
+      price: 1200,
+      created_at: new Date().toISOString(),
+    },
+  ],
+  
+  // Capture Moments services
+  '123e4567-e89b-12d3-a456-426614174003': [
+    {
+      id: '123e4567-e89b-12d3-a456-426614174301',
+      vendor_id: '123e4567-e89b-12d3-a456-426614174003',
+      name: 'Full Day Photography',
+      description: 'Complete event coverage with edited photos',
+      price: 2000,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: '123e4567-e89b-12d3-a456-426614174302',
+      vendor_id: '123e4567-e89b-12d3-a456-426614174003',
+      name: 'Half Day Photography',
+      description: '4-hour event coverage with edited photos',
+      price: 1200,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: '123e4567-e89b-12d3-a456-426614174303',
+      vendor_id: '123e4567-e89b-12d3-a456-426614174003',
+      name: 'Photo Booth Service',
+      description: 'Setup with props and unlimited prints',
+      price: 800,
+      created_at: new Date().toISOString(),
+    },
+  ],
+
+  // Royal Palace services
+  '123e4567-e89b-12d3-a456-426614174004': [
+    {
+      id: '123e4567-e89b-12d3-a456-426614174401',
+      vendor_id: '123e4567-e89b-12d3-a456-426614174004',
+      name: 'Grand Ballroom Package',
+      description: 'Complete ballroom rental with luxury amenities',
+      price: 8000,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: '123e4567-e89b-12d3-a456-426614174402',
+      vendor_id: '123e4567-e89b-12d3-a456-426614174004',
+      name: 'Garden Wedding Package',
+      description: 'Outdoor venue with tent and garden setup',
+      price: 6000,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: '123e4567-e89b-12d3-a456-426614174403',
+      vendor_id: '123e4567-e89b-12d3-a456-426614174004',
+      name: 'Premium Catering Add-on',
+      description: 'High-end catering service for up to 200 guests',
+      price: 4000,
+      created_at: new Date().toISOString(),
+    },
+  ],
+
+  // Elite Decorators services
+  '123e4567-e89b-12d3-a456-426614174005': [
+    {
+      id: '123e4567-e89b-12d3-a456-426614174501',
+      vendor_id: '123e4567-e89b-12d3-a456-426614174005',
+      name: 'Luxury Decoration Package',
+      description: 'Premium decor with floral arrangements and lighting',
+      price: 3500,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: '123e4567-e89b-12d3-a456-426614174502',
+      vendor_id: '123e4567-e89b-12d3-a456-426614174005',
+      name: 'Theme-based Decoration',
+      description: 'Customized themed decoration for your event',
+      price: 2800,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: '123e4567-e89b-12d3-a456-426614174503',
+      vendor_id: '123e4567-e89b-12d3-a456-426614174005',
+      name: 'Basic Decoration Setup',
+      description: 'Essential decoration elements for your event',
+      price: 1500,
+      created_at: new Date().toISOString(),
+    },
+  ],
+};
+
+// Verify the structure of MOCK_SERVICES
+console.log('Available mock service IDs:', Object.keys(MOCK_SERVICES));
 
 const VendorDetailsScreen = ({ route, navigation }) => {
-  const [vendor, setVendor] = useState(MOCK_VENDOR);
-  const [vendorImages, setVendorImages] = useState([]);
-  const [vendorServices, setVendorServices] = useState([]);
+  // Get vendor from route params
+  const initialVendor = route.params?.vendor || MOCK_VENDOR;
+  
+  // Initialize vendorServices with mock data for the initial vendor
+  const initialServices = MOCK_SERVICES[initialVendor.id] || [];
+  
+  const [vendor, setVendor] = useState(initialVendor);
+  const [vendorImages, setVendorImages] = useState([initialVendor.image_url]);
+  const [vendorServices, setVendorServices] = useState(initialServices); // Initialize with mock services
   const { isFavorite, addFavorite, removeFavorite } = useFavorites();
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
@@ -73,77 +197,56 @@ const VendorDetailsScreen = ({ route, navigation }) => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedServices, setSelectedServices] = useState([]);
   const [totalPrice, setTotalPrice] = useState(0);
+  const [dateAvailability, setDateAvailability] = useState(null);
 
   useEffect(() => {
     const fetchVendorData = async () => {
       try {
         setLoading(true);
-        let vendorId;
         
-        // Safely get vendorId from route params or use mock
-        if (route.params?.vendorId) {
-          vendorId = route.params.vendorId;
+        if (route.params?.vendor) {
+          const vendorFromParams = route.params.vendor;
+          console.log('Full vendor data:', vendorFromParams);
+          console.log('Vendor ID type:', typeof vendorFromParams.id);
+          console.log('Loading vendor:', vendorFromParams.name);
+          console.log('Vendor ID:', vendorFromParams.id);
+          console.log('All available mock service IDs:', Object.keys(MOCK_SERVICES));
+          console.log('Trying to find services for ID:', vendorFromParams.id);
+          console.log('Found services:', MOCK_SERVICES[vendorFromParams.id]);
+          
+          setVendor(vendorFromParams);
+          setVendorImages([vendorFromParams.image_url]);
+          
+          // Get mock services for this vendor
+          const mockServicesForVendor = MOCK_SERVICES[vendorFromParams.id];
+          
+          if (mockServicesForVendor) {
+            console.log('Setting services:', mockServicesForVendor);
+            setVendorServices(mockServicesForVendor);
+          } else {
+            console.log('No mock services found for vendor ID:', vendorFromParams.id);
+            setVendorServices([]);
+          }
+          
+          fetchAvailability(vendorFromParams.id);
         } else {
-          // Use mock data if no vendorId provided
+          console.log('No vendor in params, using mock vendor');
           setVendor(MOCK_VENDOR);
           setVendorImages([MOCK_VENDOR.image_url]);
-          setVendorServices(MOCK_SERVICES); // Use mock services
-          return;
+          const mockServices = MOCK_SERVICES[MOCK_VENDOR.id];
+          console.log('Setting mock vendor services:', mockServices?.length || 0, 'services');
+          setVendorServices(mockServices || []);
         }
-
-        // Fetch vendor details
-        const { data: vendorData, error: vendorError } = await supabase
-          .from('vendors')
-          .select('*')
-          .eq('id', vendorId)
-          .single();
-
-        if (vendorError) {
-          console.error('Vendor fetch error:', vendorError);
-          throw vendorError;
-        }
-
-        if (!vendorData) {
-          setVendor(MOCK_VENDOR);
-          return;
-        }
-
-        // Fetch vendor images
-        const { data: imagesData, error: imagesError } = await supabase
-          .from('vendor_images')
-          .select('image_url')
-          .eq('vendor_id', vendorId)
-          .order('is_primary', { ascending: false });
-
-        if (imagesError) {
-          console.error('Images fetch error:', imagesError);
-        }
-
-        // Fetch vendor services
-        const { data: servicesData, error: servicesError } = await supabase
-          .from('vendor_services')
-          .select('*')
-          .eq('vendor_id', vendorId);
-
-        if (servicesError) {
-          console.error('Services fetch error:', servicesError);
-        }
-
-        setVendor(vendorData);
-        setVendorImages(imagesData?.map(img => img.image_url) || [vendorData.image_url]);
-        setVendorServices(servicesData || MOCK_SERVICES); // Fallback to mock services
       } catch (error) {
         console.error('Error fetching vendor data:', error);
         Alert.alert('Error', 'Failed to load vendor details');
-        setVendor(MOCK_VENDOR);
-        setVendorServices(MOCK_SERVICES); // Use mock services on error
       } finally {
         setLoading(false);
       }
     };
 
     fetchVendorData();
-  }, [route.params]);
+  }, [route.params?.vendor]);
 
   const toggleFavorite = () => {
     setLoading(true);
@@ -162,6 +265,13 @@ const VendorDetailsScreen = ({ route, navigation }) => {
     }
   };
 
+  const handleDateSelect = (date) => {
+    setSelectedDate(date);
+    // Find availability for selected date
+    const availabilityForDate = availability.find(a => a.date === date);
+    setDateAvailability(availabilityForDate);
+  };
+
   const handleBookNow = () => {
     if (!selectedDate) {
       Alert.alert('Select Date', 'Please select an available date first');
@@ -173,40 +283,24 @@ const VendorDetailsScreen = ({ route, navigation }) => {
       return;
     }
 
-    // Find the availability for the selected date
-    const dateAvailability = availability.find(a => a.date === selectedDate);
-    
-    // If we're using mock data (no availability records), consider all dates available
-    if (availability.length === 0) {
-      // Navigate to BookingForm directly
-      navigation.navigate('BookingForm', { 
-        vendor,
-        selectedDate,
-        availableSlots: ['09:00', '10:00', '11:00', '14:00', '15:00'],
-        selectedServices: vendorServices.filter(service => selectedServices.includes(service.id)),
-        totalPrice,
-      });
-      return;
-    }
-
-    // Check real availability data
-    if (!dateAvailability || !dateAvailability.is_available) {
-      Alert.alert('Not Available', 'Please select an available date');
-      return;
-    }
-
-    // Navigate to BookingForm directly
     navigation.navigate('BookingForm', { 
       vendor,
       selectedDate,
-      availableSlots: dateAvailability.available_slots,
+      availableSlots: dateAvailability?.available_slots || ['09:00', '10:00', '11:00', '14:00', '15:00'],
       selectedServices: vendorServices.filter(service => selectedServices.includes(service.id)),
       totalPrice,
     });
   };
 
-  const fetchAvailability = async () => {
-    if (!vendor?.id) return;
+  const fetchAvailability = async (vendorId) => {
+    // Add validation for UUID format
+    const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(vendorId);
+    
+    if (!vendorId || !isValidUUID) {
+      console.log('Invalid vendor ID format, using mock availability');
+      setAvailability([]);
+      return;
+    }
 
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -214,14 +308,12 @@ const VendorDetailsScreen = ({ route, navigation }) => {
       const { data, error } = await supabase
         .from('vendor_availability')
         .select('*')
-        .eq('vendor_id', vendor.id)
+        .eq('vendor_id', vendorId)
         .gte('date', today)
         .order('date');
 
       if (error) {
         console.error('Availability fetch error:', error);
-        // When there's an error, we'll use empty availability array
-        // This will make the calendar treat all dates as available
         setAvailability([]);
         return;
       }
@@ -248,6 +340,20 @@ const VendorDetailsScreen = ({ route, navigation }) => {
   const handleServiceSelection = (services, total) => {
     setSelectedServices(services);
     setTotalPrice(total);
+  };
+
+  const renderPricingCalculator = () => {
+    console.log('Rendering PricingCalculator with services:', vendorServices);
+    return (
+      <Card containerStyle={styles.section}>
+        <Text style={styles.sectionTitle}>Services & Pricing</Text>
+        <Text>Number of services: {vendorServices?.length || 0}</Text>
+        <PricingCalculator
+          services={vendorServices || []}
+          onServiceSelect={handleServiceSelection}
+        />
+      </Card>
+    );
   };
 
   if (loading) {
@@ -305,17 +411,11 @@ const VendorDetailsScreen = ({ route, navigation }) => {
           <AvailabilityCalendar
             availability={availability}
             selectedDate={selectedDate}
-            onDateSelect={setSelectedDate}
+            onDateSelect={handleDateSelect}
           />
         </Card>
 
-        <Card containerStyle={styles.section}>
-          <Text style={styles.sectionTitle}>Services & Pricing</Text>
-          <PricingCalculator
-            services={vendorServices}
-            onServiceSelect={handleServiceSelection}
-          />
-        </Card>
+        {renderPricingCalculator()}
 
         <Button
           title="Book Now"
@@ -442,6 +542,10 @@ const styles = StyleSheet.create({
   },
   bookButtonDisabledText: {
     color: colors.white,
+  },
+  image: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
   },
 });
 

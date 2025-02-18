@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, Alert } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, Alert, Animated } from 'react-native';
 import { Button, Input, Card } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
 import { useBooking } from '../../contexts/BookingContext';
@@ -87,8 +87,14 @@ const BookingForm = ({ route, navigation }) => {
                 services: selectedServices,
               });
 
-              // Navigate to Payment screen with correct name
-              navigation.navigate('Payment', { booking });
+              // Navigate to BookingCart
+              navigation.navigate('BookingCart', { 
+                booking: {
+                  ...booking,
+                  vendor,
+                  services: selectedServices,
+                }
+              });
             } catch (error) {
               console.error('Booking error:', error);
               Alert.alert('Error', 'Failed to create booking. Please try again.');

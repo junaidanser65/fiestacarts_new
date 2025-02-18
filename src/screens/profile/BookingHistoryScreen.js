@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { Button, Card, Icon } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
 import { useBooking } from '../../contexts/BookingContext';
@@ -47,6 +47,8 @@ const MOCK_BOOKINGS = [
 export default function BookingHistoryScreen({ route, navigation }) {
   const [activeTab, setActiveTab] = useState('upcoming');
   const { bookings } = useBooking();
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
   useEffect(() => {
     // Set initial tab when screen mounts or route params change
@@ -129,6 +131,110 @@ export default function BookingHistoryScreen({ route, navigation }) {
     }
   };
 
+  const handleViewDetails = (booking) => {
+    setSelectedBooking(booking);
+    setIsModalVisible(true);
+  };
+
+  const BookingDetailsModal = ({ booking, visible, onClose }) => {
+    if (!booking) return null;
+
+    return (
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={visible}
+        onRequestClose={onClose}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Booking Details</Text>
+              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Icon name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              {/* Vendor Information */}
+              <View style={styles.detailSection}>
+                <Text style={styles.detailLabel}>Vendor</Text>
+                <Text style={styles.detailValue}>{booking.vendor.name}</Text>
+                <Text style={styles.detailSubtext}>{booking.vendor.category}</Text>
+              </View>
+
+              {/* Status */}
+              <View style={styles.detailSection}>
+                <Text style={styles.detailLabel}>Status</Text>
+                <View style={styles.statusContainer}>
+                  <View style={[
+                    getStatusBadgeStyle(booking.status).container,
+                    getStatusBadgeStyle(booking.status).style,
+                    styles.modalStatusBadge
+                  ]}>
+                    <Text style={getStatusBadgeStyle(booking.status).textStyle}>
+                      {booking.status.toUpperCase()}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Date & Time */}
+              <View style={styles.detailSection}>
+                <Text style={styles.detailLabel}>Date & Time</Text>
+                <Text style={styles.detailValue}>{formatDate(booking.selectedDate)}</Text>
+                <Text style={styles.detailSubtext}>{formatTime(booking.time)}</Text>
+              </View>
+
+              {/* Services */}
+              <View style={styles.detailSection}>
+                <Text style={styles.detailLabel}>Services</Text>
+                {booking.selectedServices.map(service => (
+                  <View key={service.id} style={styles.serviceItem}>
+                    <Text style={styles.serviceName}>{service.name}</Text>
+                    <Text style={styles.servicePrice}>
+                      ${(service.price * booking.guests).toLocaleString()}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Guests */}
+              <View style={styles.detailSection}>
+                <Text style={styles.detailLabel}>Number of Guests</Text>
+                <Text style={styles.detailValue}>{booking.guests} people</Text>
+              </View>
+
+              {/* Contact Information */}
+              <View style={styles.detailSection}>
+                <Text style={styles.detailLabel}>Vendor Contact</Text>
+                <Text style={styles.detailValue}>{booking.vendor.contact_phone}</Text>
+                <Text style={styles.detailSubtext}>{booking.vendor.contact_email}</Text>
+              </View>
+
+              {/* Total Amount */}
+              <View style={styles.detailSection}>
+                <Text style={styles.detailLabel}>Total Amount</Text>
+                <Text style={[styles.detailValue, styles.totalAmount]}>
+                  ${(booking.totalPrice * booking.guests).toLocaleString()}
+                </Text>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <Button
+                title="Close"
+                onPress={onClose}
+                buttonStyle={styles.closeModalButton}
+                titleStyle={styles.closeModalButtonText}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
   const renderBookingCard = (booking) => (
     <Card key={booking.id} containerStyle={styles.bookingCard}>
       <View style={styles.bookingHeader}>
@@ -152,24 +258,6 @@ export default function BookingHistoryScreen({ route, navigation }) {
           {formatDate(booking.selectedDate)}
         </Text>
       </View>
-      <View style={styles.dateTimeContainer}>
-        <Icon name="access-time" size={16} color={colors.textLight} />
-        <Text style={styles.dateTimeText}>
-          {formatTime(booking.time)}
-        </Text>
-      </View>
-
-      <View style={styles.servicesContainer}>
-        <Text style={styles.sectionTitle}>Services</Text>
-        {booking.selectedServices.map(service => (
-          <View key={service.id} style={styles.serviceItem}>
-            <Text style={styles.serviceName}>{service.name}</Text>
-            <Text style={styles.servicePrice}>
-              ${(service.price * booking.guests).toLocaleString()}
-            </Text>
-          </View>
-        ))}
-      </View>
 
       <View style={styles.guestContainer}>
         <Icon name="people" size={16} color={colors.textLight} />
@@ -185,15 +273,13 @@ export default function BookingHistoryScreen({ route, navigation }) {
         </Text>
       </View>
 
-      {activeTab === 'upcoming' && (
-        <Button
-          title="View Details"
-          type="outline"
-          buttonStyle={styles.detailsButton}
-          titleStyle={styles.detailsButtonText}
-          onPress={() => navigation.navigate('BookingDetails', { booking })}
-        />
-      )}
+      <Button
+        title="View Details"
+        type="outline"
+        buttonStyle={styles.detailsButton}
+        titleStyle={styles.detailsButtonText}
+        onPress={() => handleViewDetails(booking)}
+      />
     </Card>
   );
 
@@ -244,6 +330,15 @@ export default function BookingHistoryScreen({ route, navigation }) {
           )}
         </ScrollView>
       </View>
+
+      <BookingDetailsModal
+        booking={selectedBooking}
+        visible={isModalVisible}
+        onClose={() => {
+          setIsModalVisible(false);
+          setSelectedBooking(null);
+        }}
+      />
     </View>
   );
 }
@@ -381,29 +476,6 @@ const styles = StyleSheet.create({
     color: colors.textLight,
     marginLeft: spacing.sm,
   },
-  servicesContainer: {
-    marginTop: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  sectionTitle: {
-    ...typography.body,
-    fontWeight: 'bold',
-    marginBottom: spacing.sm,
-  },
-  serviceItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xs,
-  },
-  serviceName: {
-    ...typography.body,
-    flex: 1,
-  },
-  servicePrice: {
-    ...typography.body,
-    color: colors.primary,
-    fontWeight: 'bold',
-  },
   guestContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -447,5 +519,92 @@ const styles = StyleSheet.create({
     color: colors.textLight,
     textAlign: 'center',
     marginTop: spacing.md,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: colors.background,
+    borderRadius: 16,
+    width: '90%',
+    maxHeight: '80%',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalTitle: {
+    ...typography.h2,
+  },
+  closeButton: {
+    padding: spacing.xs,
+  },
+  modalBody: {
+    padding: spacing.md,
+  },
+  detailSection: {
+    marginBottom: spacing.md,
+  },
+  detailLabel: {
+    ...typography.caption,
+    color: colors.textLight,
+    marginBottom: spacing.xs,
+  },
+  detailValue: {
+    ...typography.h3,
+    color: colors.text,
+  },
+  detailSubtext: {
+    ...typography.body,
+    color: colors.textLight,
+  },
+  modalFooter: {
+    padding: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  closeModalButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingVertical: spacing.sm,
+  },
+  closeModalButtonText: {
+    ...typography.button,
+    color: colors.white,
+  },
+  serviceItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  serviceName: {
+    ...typography.body,
+    flex: 1,
+  },
+  servicePrice: {
+    ...typography.body,
+    color: colors.primary,
+    fontWeight: 'bold',
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  modalStatusBadge: {
+    alignSelf: 'flex-start',
+    marginLeft: 0,
+    marginTop: spacing.xs,
   },
 }); 
