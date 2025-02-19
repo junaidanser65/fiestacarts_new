@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { StyleSheet, View, Text, Dimensions, ScrollView, TouchableOpacity, Animated, SafeAreaView, FlatList, TextInput, PermissionsAndroid, Platform, Alert, ActivityIndicator } from 'react-native';
 import { Button, SearchBar, Card, Icon } from '@rneui/themed';
 import MapView, { Marker, PROVIDER_GOOGLE, Circle } from 'react-native-maps';
@@ -152,9 +152,81 @@ const FEATURED_VENDORS = [
   },
 ];
 
+const SearchHeader = ({ searchQuery, setSearchQuery, isSearchActive, setIsSearchActive }) => {
+  const searchInputRef = useRef(null);
+
+  const handleSearchChange = useCallback((text) => {
+    setSearchQuery(text);
+  }, [setSearchQuery]);
+
+  const handleSearchClose = useCallback(() => {
+    setIsSearchActive(false);
+    setSearchQuery('');
+    searchInputRef.current?.blur();
+  }, [setIsSearchActive, setSearchQuery]);
+
+  const handleSearchPress = useCallback(() => {
+    setIsSearchActive(true);
+    searchInputRef.current?.focus();
+  }, [setIsSearchActive]);
+
+  return (
+    <View style={styles.searchHeader}>
+      <Animated.View 
+        style={[
+          styles.searchContainer,
+          isSearchActive ? {
+            flex: 1,
+            marginRight: spacing.sm,
+          } : {
+            width: 45,
+          }
+        ]}
+      >
+        {isSearchActive ? (
+          <>
+            <Icon name="search" size={20} color={colors.textLight} style={styles.searchIcon} />
+            <TextInput
+              ref={searchInputRef}
+              style={styles.searchInput}
+              placeholder="Search vendors..."
+              value={searchQuery}
+              onChangeText={handleSearchChange}
+              placeholderTextColor={colors.textLight}
+              autoFocus={true}
+              returnKeyType="done"
+              autoCapitalize="none"
+              autoCorrect={false}
+              blurOnSubmit={false}
+              onFocus={() => setIsSearchActive(true)}
+              onBlur={() => setIsSearchActive(false)}
+            />
+            <TouchableOpacity 
+              style={styles.searchCloseButton}
+              onPress={handleSearchClose}
+            >
+              <Icon name="close" size={20} color={colors.textLight} />
+            </TouchableOpacity>
+          </>
+        ) : (
+          <TouchableOpacity 
+            style={styles.searchButton}
+            onPress={handleSearchPress}
+          >
+            <Icon name="search" size={24} color={colors.background} />
+          </TouchableOpacity>
+        )}
+      </Animated.View>
+    </View>
+  );
+};
+
 export default function MainDashboardScreen({ navigation }) {
   const { user, loading } = useAuth();
-  const [search, setSearch] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchActive, setIsSearchActive] = useState(false);
+  const searchInputRef = useRef(null);
+
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [region, setRegion] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
@@ -164,11 +236,6 @@ export default function MainDashboardScreen({ navigation }) {
   const [isMapLoading, setIsMapLoading] = useState(true);
 
   const scrollViewRef = useRef(null);
-  const [isSearchActive, setIsSearchActive] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const searchWidthAnim = useRef(new Animated.Value(1)).current;
-  const searchOpacityAnim = useRef(new Animated.Value(1)).current;
-  const searchInputRef = useRef(null);
 
   useEffect(() => {
     getUserLocation();
@@ -221,10 +288,6 @@ export default function MainDashboardScreen({ navigation }) {
     }
   };
 
-  const handleSearch = (text) => {
-    setSearch(text);
-  };
-
   const handleCategoryPress = (category) => {
     setSelectedCategory(category === selectedCategory ? null : category);
   };
@@ -261,67 +324,6 @@ export default function MainDashboardScreen({ navigation }) {
       }
     });
   };
-
-  const handleSearchPress = () => {
-    setIsSearchActive(true);
-    animateSearch(true);
-  };
-
-  const handleSearchClose = () => {
-    setIsSearchActive(false);
-    setSearchQuery('');
-    animateSearch(false);
-  };
-
-  const SearchHeader = () => (
-    <View style={styles.searchHeader}>
-      <Animated.View 
-        style={[
-          styles.searchContainer,
-          isSearchActive ? {
-            flex: 1,
-            marginRight: spacing.sm,
-          } : {
-            width: 45,
-          }
-        ]}
-      >
-        {isSearchActive ? (
-          <>
-            <Icon name="search" size={20} color={colors.textLight} style={styles.searchIcon} />
-            <TextInput
-              ref={searchInputRef}
-              style={styles.searchInput}
-              placeholder="Search vendors..."
-              value={searchQuery}
-              onChangeText={(text) => {
-                setSearchQuery(text);
-              }}
-              placeholderTextColor={colors.textLight}
-              autoFocus={true}
-              returnKeyType="search"
-              autoCapitalize="none"
-              autoCorrect={false}
-              blurOnSubmit={false}
-            />
-            <TouchableOpacity 
-              style={styles.searchCloseButton}
-              onPress={handleSearchClose}
-            >
-              <Icon name="close" size={20} color={colors.textLight} />
-            </TouchableOpacity>
-          </>
-        ) : (
-          <TouchableOpacity 
-            style={styles.searchButton}
-            onPress={handleSearchPress}
-          >
-            <Icon name="search" size={24} color={colors.background} />
-          </TouchableOpacity>
-        )}
-      </Animated.View>
-    </View>
-  );
 
   const renderMap = () => (
     <View style={styles.section}>
@@ -470,7 +472,12 @@ export default function MainDashboardScreen({ navigation }) {
           </View>
         </View>
 
-        <SearchHeader />
+        <SearchHeader 
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          isSearchActive={isSearchActive}
+          setIsSearchActive={setIsSearchActive}
+        />
 
         {searchQuery.length > 0 ? (
           <View style={styles.searchResults}>
