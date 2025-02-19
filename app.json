@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "vendors-caterers-app",
-    "slug": "vendors-caterers-app",
+    "name": "fiestacarts",
+    "slug": "fiestacarts",
     "scheme": "vendorapp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -13,23 +13,20 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*",
-      "src/assets/images/*"
-    ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourcompany.vendorapp"
+      "bundleIdentifier": "com.fiestacarts.vendorapp"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.yourcompany.vendorapp"
+      "package": "com.fiestacarts.vendorapp"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     }
+    
   }
 }

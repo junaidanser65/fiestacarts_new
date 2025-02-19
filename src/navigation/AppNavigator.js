@@ -51,6 +51,13 @@ const DashboardStack = () => (
     <Stack.Screen name="VendorDetails" component={VendorDetailsScreen} />
     <Stack.Screen name="FullMap" component={FullMapScreen} />
     <Stack.Screen name="BookingForm" component={BookingFormScreen} />
+    <Stack.Screen
+      name="VendorSearch"
+      component={VendorSearchScreen}
+      options={{
+        headerShown: false,
+      }}
+    />
   </Stack.Navigator>
 );
 
@@ -145,15 +152,6 @@ const ProfileStack = () => (
       options={{
         headerShown: true,
         headerTitle: 'Search Filters',
-        headerBackTitle: 'Back',
-      }}
-    />
-    <Stack.Screen
-      name="VendorSearch"
-      component={VendorSearchScreen}
-      options={{
-        headerShown: true,
-        headerTitle: 'Search Vendors',
         headerBackTitle: 'Back',
       }}
     />

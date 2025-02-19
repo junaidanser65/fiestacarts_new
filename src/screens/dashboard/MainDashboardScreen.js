@@ -9,6 +9,7 @@ import { VENDOR_IMAGES } from '../../constants/images';
 import * as Location from 'expo-location';
 import { getDistance } from 'geolib';
 import Slider from '@react-native-community/slider';
+import { useFocusEffect } from '@react-navigation/native';
 
 // Mock data - replace with API call later
 const MOCK_CATEGORIES = [
@@ -237,9 +238,12 @@ export default function MainDashboardScreen({ navigation }) {
 
   const scrollViewRef = useRef(null);
 
-  useEffect(() => {
-    getUserLocation();
-  }, []);
+  // Use useFocusEffect to refresh location when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      getUserLocation();
+    }, [])
+  );
 
   const getUserLocation = async () => {
     try {
@@ -258,10 +262,10 @@ export default function MainDashboardScreen({ navigation }) {
         longitudeDelta: 0.0421,
       };
       
-      // Set user location and center map on it
       setUserLocation(userCoords);
       setRegion(userCoords);
-      
+      setIsMapLoading(false);
+
       // Generate vendor locations relative to user's location
       if (vendorsWithLocations.length === 0) {
         const newVendorsWithLocation = MOCK_VENDORS.map(vendor => ({
@@ -285,6 +289,7 @@ export default function MainDashboardScreen({ navigation }) {
     } catch (error) {
       console.error('Error getting location:', error);
       Alert.alert('Error', 'Unable to get your location');
+      setIsMapLoading(false);
     }
   };
 
@@ -389,12 +394,7 @@ export default function MainDashboardScreen({ navigation }) {
             region={region}
             showsUserLocation={true}
             showsMyLocationButton={true}
-            onMapReady={() => {
-              setIsMapLoading(false);
-              if (userLocation) {
-                setRegion(userLocation);
-              }
-            }}
+            onMapReady={() => setIsMapLoading(false)}
           >
             {userLocation && (
               <Circle
@@ -572,7 +572,7 @@ export default function MainDashboardScreen({ navigation }) {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Featured Vendors</Text>
-                <TouchableOpacity onPress={() => navigation.navigate('VendorSearch', { filters: { featured: true } })}>
+                <TouchableOpacity>
                   <Text style={styles.seeAllText}>See All</Text>
                 </TouchableOpacity>
               </View>
@@ -597,7 +597,7 @@ export default function MainDashboardScreen({ navigation }) {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>All Vendors</Text>
-                <TouchableOpacity onPress={() => navigation.navigate('VendorSearch')}>
+                <TouchableOpacity>
                   <Text style={styles.seeAllText}>See All</Text>
                 </TouchableOpacity>
               </View>

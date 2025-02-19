@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, SearchBar, Icon, Button } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
 import { supabase } from '../../lib/supabase';
@@ -108,6 +109,9 @@ export default function VendorSearchScreen({ navigation, route }) {
 
   const renderHeader = () => (
     <View style={styles.header}>
+      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <Icon name="arrow-back" size={24} color={colors.primary} />
+      </TouchableOpacity>
       <SearchBar
         placeholder="Search vendors..."
         onChangeText={debouncedSearch}
@@ -142,10 +146,10 @@ export default function VendorSearchScreen({ navigation, route }) {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <FlatList
         data={vendors}
-        renderItem={({ item, index }) => (
+        renderItem={({ item }) => (
           <VendorCard
             vendor={item}
             onPress={() => navigation.navigate('VendorDetails', { vendor: item })}
@@ -190,7 +194,7 @@ export default function VendorSearchScreen({ navigation, route }) {
           )
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -198,12 +202,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    padding: spacing.md,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.sm,
     backgroundColor: colors.background,
+    marginBottom: spacing.md,
+  },
+  backButton: {
+    marginRight: spacing.sm,
   },
   searchContainer: {
     flex: 1,
@@ -215,9 +224,11 @@ const styles = StyleSheet.create({
   },
   searchInputContainer: {
     backgroundColor: colors.surface,
+    borderRadius: 8,
   },
   listContent: {
     flexGrow: 1,
+    paddingBottom: spacing.lg,
   },
   centerContainer: {
     flex: 1,

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { Button, Input, Icon } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
 import { useAuth } from '../../contexts/AuthContext';
@@ -18,7 +18,6 @@ export default function SignupScreen({ navigation }) {
   const [error, setError] = useState('');
 
   const handleSignup = async () => {
-    // Validate form
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
       setError('Please fill in all fields');
       return;
@@ -172,6 +171,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: colors.background,
     padding: spacing.lg,
+    justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
@@ -194,6 +194,7 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     paddingHorizontal: 0,
+    marginBottom: spacing.md,
   },
   halfInput: {
     width: '48%',
