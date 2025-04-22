@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, Dimensions, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
+import { StyleSheet, View, Text, Dimensions, TouchableOpacity, SafeAreaView, StatusBar, Platform } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, Circle } from 'react-native-maps';
 import { SearchBar, Icon, Button, Card } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
