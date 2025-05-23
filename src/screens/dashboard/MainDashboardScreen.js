@@ -10,8 +10,9 @@ import * as Location from 'expo-location';
 import { getDistance } from 'geolib';
 import Slider from '@react-native-community/slider';
 import { useFocusEffect } from '@react-navigation/native';
+import { getVendors } from '../../api/apiService';
 
-// Mock data - replace with API call later
+// Categories data
 const MOCK_CATEGORIES = [
   { id: '1', name: 'Catering', icon: 'restaurant' },
   { id: '2', name: 'Venues', icon: 'location-on' },
@@ -20,82 +21,7 @@ const MOCK_CATEGORIES = [
   { id: '5', name: 'Decoration', icon: 'celebration' },
 ];
 
-const MOCK_VENDORS = [
-  {
-    id: '123e4567-e89b-12d3-a456-426614174001',
-    name: 'Gourmet Catering Co.',
-    category: 'Catering',
-    rating: 4.8,
-    reviews_count: 124,
-    price_range: '$$',
-    image_url: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=800&q=80',
-    latitude: 37.78825,
-    longitude: -122.4324,
-    description: 'Premium catering services for all types of events.',
-  },
-  {
-    id: '123e4567-e89b-12d3-a456-426614174002',
-    name: 'Elegant Events Venue',
-    category: 'Venues',
-    rating: 4.9,
-    reviews_count: 89,
-    price_range: '$$$',
-    image_url: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=800&q=80',
-    latitude: 37.78925,
-    longitude: -122.4344,
-    description: 'Luxurious venue for weddings and corporate events.',
-  },
-  {
-    id: '123e4567-e89b-12d3-a456-426614174003',
-    name: 'Capture Moments',
-    category: 'Photography',
-    rating: 4.7,
-    reviews_count: 156,
-    price_range: '$$',
-    image_url: 'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=800&q=80',
-    latitude: 37.78725,
-    longitude: -122.4354,
-    description: 'Professional photography services for your special moments.',
-  },
-  {
-    id: '123e4567-e89b-12d3-a456-426614174004',
-    name: 'Royal Palace',
-    category: 'Venues',
-    rating: 5.0,
-    reviews_count: 230,
-    price_range: '$$$',
-    image_url: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=800&q=80',
-    description: 'Luxurious venue for all your special occasions',
-    latitude: 37.78625,
-    longitude: -122.4344,
-    address: '456 Grand Ave, San Francisco, CA 94102',
-    contact_phone: '+1234567890',
-    contact_email: 'info@royalpalace.com',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    badge: 'Featured',
-  },
-  {
-    id: '123e4567-e89b-12d3-a456-426614174005',
-    name: 'Elite Decorators',
-    category: 'Decoration',
-    rating: 4.9,
-    reviews_count: 180,
-    price_range: '$$',
-    image_url: 'https://images.unsplash.com/photo-1478146896981-b80fe463b330?auto=format&fit=crop&w=800&q=80',
-    description: 'Premium decoration services for all events',
-    latitude: 37.78525,
-    longitude: -122.4364,
-    address: '789 Design St, San Francisco, CA 94103',
-    contact_phone: '+1234567891',
-    contact_email: 'info@elitedecorators.com',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    badge: 'Top Rated',
-  },
-];
-
-// Mock data for special offers
+// Special offers data
 const SPECIAL_OFFERS = [
   {
     id: '1',
@@ -110,46 +36,6 @@ const SPECIAL_OFFERS = [
     description: 'Book a venue and get free decoration services',
     code: 'FREEDECOR',
     expiryDate: '2024-05-15',
-  },
-];
-
-// Mock data for featured vendors
-const FEATURED_VENDORS = [
-  {
-    id: '123e4567-e89b-12d3-a456-426614174004',
-    name: 'Royal Palace',
-    category: 'Venues',
-    rating: 5.0,
-    reviews_count: 230,
-    price_range: '$$$',
-    image_url: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=800&q=80',
-    description: 'Luxurious venue for all your special occasions',
-    latitude: 37.78625,
-    longitude: -122.4344,
-    address: '456 Grand Ave, San Francisco, CA 94102',
-    contact_phone: '+1234567890',
-    contact_email: 'info@royalpalace.com',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    badge: 'Featured',
-  },
-  {
-    id: '123e4567-e89b-12d3-a456-426614174005',
-    name: 'Elite Decorators',
-    category: 'Decoration',
-    rating: 4.9,
-    reviews_count: 180,
-    price_range: '$$',
-    image_url: 'https://images.unsplash.com/photo-1478146896981-b80fe463b330?auto=format&fit=crop&w=800&q=80',
-    description: 'Premium decoration services for all events',
-    latitude: 37.78525,
-    longitude: -122.4364,
-    address: '789 Design St, San Francisco, CA 94103',
-    contact_phone: '+1234567891',
-    contact_email: 'info@elitedecorators.com',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    badge: 'Top Rated',
   },
 ];
 
@@ -227,6 +113,8 @@ export default function MainDashboardScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchActive, setIsSearchActive] = useState(false);
   const searchInputRef = useRef(null);
+  const [vendors, setVendors] = useState([]);
+  const [loadingVendors, setLoadingVendors] = useState(true);
 
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [region, setRegion] = useState(null);
@@ -238,9 +126,31 @@ export default function MainDashboardScreen({ navigation }) {
 
   const scrollViewRef = useRef(null);
 
-  // Use useFocusEffect to refresh location when screen is focused
+  // Fetch vendors from API
+  const fetchVendors = async () => {
+    try {
+      setLoadingVendors(true);
+      console.log('Fetching vendors...');
+      const response = await getVendors();
+      console.log('Vendors API Response:', response);
+      if (response && response.success) {
+        console.log('Setting vendors:', response.vendors);
+        setVendors(response.vendors);
+      } else {
+        console.log('API returned success: false');
+      }
+    } catch (error) {
+      console.error('Error fetching vendors:', error);
+      Alert.alert('Error', 'Failed to fetch vendors');
+    } finally {
+      setLoadingVendors(false);
+    }
+  };
+
+  // Use useFocusEffect to refresh data when screen is focused
   useFocusEffect(
     useCallback(() => {
+      fetchVendors();
       getUserLocation();
     }, [])
   );
@@ -266,25 +176,18 @@ export default function MainDashboardScreen({ navigation }) {
       setRegion(userCoords);
       setIsMapLoading(false);
 
-      // Generate vendor locations relative to user's location
-      if (vendorsWithLocations.length === 0) {
-        const newVendorsWithLocation = MOCK_VENDORS.map(vendor => ({
-          ...vendor,
-          latitude: location.coords.latitude + (Math.random() - 0.5) * 0.02,
-          longitude: location.coords.longitude + (Math.random() - 0.5) * 0.02,
-        }));
-        setVendorsWithLocations(newVendorsWithLocation);
-        
-        // Initial filtering of vendors within radius
-        const initialVendorsInRange = newVendorsWithLocation.filter(vendor => {
+      // Update nearby vendors based on user location
+      if (vendors.length > 0) {
+        const vendorsInRange = vendors.filter(vendor => {
+          if (!vendor.locations || vendor.locations.length === 0) return false;
+          const vendorLocation = vendor.locations[0]; // Use first location
           const distance = getDistance(
             { latitude: userCoords.latitude, longitude: userCoords.longitude },
-            { latitude: vendor.latitude, longitude: vendor.longitude }
+            { latitude: vendorLocation.latitude, longitude: vendorLocation.longitude }
           );
           return distance <= radiusKm * 1000;
         });
-        
-        setNearbyVendors(initialVendorsInRange);
+        setNearbyVendors(vendorsInRange);
       }
     } catch (error) {
       console.error('Error getting location:', error);
@@ -297,17 +200,16 @@ export default function MainDashboardScreen({ navigation }) {
     setSelectedCategory(category === selectedCategory ? null : category);
   };
 
-  const filteredVendors = MOCK_VENDORS.filter(vendor => {
+  const filteredVendors = vendors.filter(vendor => {
     const query = searchQuery.toLowerCase();
     return (
       vendor.name.toLowerCase().includes(query) ||
-      vendor.category.toLowerCase().includes(query) ||
-      vendor.description.toLowerCase().includes(query)
+      vendor.business_name?.toLowerCase().includes(query) ||
+      vendor.address?.toLowerCase().includes(query)
     );
   });
 
   const handleVendorPress = (vendor) => {
-    console.log('Pressing vendor with ID:', vendor.id, 'Type:', typeof vendor.id);
     navigation.navigate('VendorDetails', { vendor });
   };
 
@@ -452,6 +354,8 @@ export default function MainDashboardScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       <ScrollView
         ref={scrollViewRef}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.header}>
           <View style={styles.welcomeContainer}>
@@ -460,7 +364,7 @@ export default function MainDashboardScreen({ navigation }) {
                 {loading ? 'Loading...' : 'Welcome back,'}
               </Text>
               <Text style={styles.nameText}>
-                {loading ? '' : user?.first_name ? `${user.first_name}!` : 'Guest!'}
+                {loading ? '' : user?.name ? `${user.name.split(' ')[0]}!` : 'Guest!'}
               </Text>
             </View>
             <TouchableOpacity 
@@ -479,30 +383,10 @@ export default function MainDashboardScreen({ navigation }) {
           setIsSearchActive={setIsSearchActive}
         />
 
-        {searchQuery.length > 0 ? (
-          <View style={styles.searchResults}>
-            <Text style={styles.searchResultsTitle}>
-              Search Results ({filteredVendors.length})
-            </Text>
-            {filteredVendors.length > 0 ? (
-              filteredVendors.map((vendor) => (
-                <VendorCard
-                  key={vendor.id}
-                  vendor={vendor}
-                  onPress={() => {
-                    handleSearchClose();
-                    navigation.navigate('VendorDetails', { vendor });
-                  }}
-                />
-              ))
-            ) : (
-              <View style={styles.noResultsContainer}>
-                <Icon name="search-off" size={48} color={colors.textLight} />
-                <Text style={styles.noResultsText}>
-                  No vendors found matching "{searchQuery}"
-                </Text>
-              </View>
-            )}
+        {loadingVendors ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>Loading vendors...</Text>
           </View>
         ) : (
           <>
@@ -520,9 +404,17 @@ export default function MainDashboardScreen({ navigation }) {
                   <TouchableOpacity
                     key={category.id}
                     style={styles.categoryItem}
-                    onPress={() => navigation.navigate('VendorSearch', {
-                      filters: { categories: [category.name] }
-                    })}
+                    onPress={() => {
+                      // Filter vendors by category
+                      const filteredVendors = vendors.filter(vendor => 
+                        vendor.business_name?.toLowerCase().includes(category.name.toLowerCase()) ||
+                        vendor.name?.toLowerCase().includes(category.name.toLowerCase())
+                      );
+                      navigation.navigate('VendorSearch', {
+                        vendors: filteredVendors,
+                        category: category.name
+                      });
+                    }}
                   >
                     <View style={styles.categoryIconContainer}>
                       <Icon name={category.icon} size={32} color={colors.primary} />
@@ -581,11 +473,11 @@ export default function MainDashboardScreen({ navigation }) {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.featuredContainer}
               >
-                {FEATURED_VENDORS.map((vendor) => (
+                {vendors.slice(0, 3).map((vendor) => (
                   <VendorCard
                     key={vendor.id}
                     vendor={vendor}
-                    onPress={() => navigation.navigate('VendorDetails', { vendor })}
+                    onPress={() => handleVendorPress(vendor)}
                     featured={true}
                     style={styles.featuredVendorCard}
                   />
@@ -602,7 +494,7 @@ export default function MainDashboardScreen({ navigation }) {
                 </TouchableOpacity>
               </View>
               <FlatList
-                data={MOCK_VENDORS}
+                data={vendors}
                 horizontal={false}
                 showsVerticalScrollIndicator={false}
                 scrollEnabled={false}
@@ -610,10 +502,10 @@ export default function MainDashboardScreen({ navigation }) {
                 renderItem={({ item }) => (
                   <VendorCard
                     vendor={item}
-                    onPress={() => navigation.navigate('VendorDetails', { vendor: item })}
+                    onPress={() => handleVendorPress(item)}
                   />
                 )}
-                keyExtractor={item => item.id}
+                keyExtractor={item => item.id.toString()}
               />
             </View>
 
@@ -713,6 +605,7 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: spacing.xl,
+    backgroundColor: colors.background,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -856,10 +749,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   vendorList: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
   featuredContainer: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
   featuredVendorCard: {
     width: 280,
@@ -888,7 +781,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   offersContainer: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
   offerCard: {
@@ -1038,5 +931,18 @@ const styles = StyleSheet.create({
   },
   hiddenMap: {
     opacity: 0,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    backgroundColor: colors.background,
   },
 }); 

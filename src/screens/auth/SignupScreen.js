@@ -12,13 +12,14 @@ export default function SignupScreen({ navigation }) {
     email: '',
     password: '',
     confirmPassword: '',
+    phoneNumber: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSignup = async () => {
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.phoneNumber) {
       setError('Please fill in all fields');
       return;
     }
@@ -87,6 +88,19 @@ export default function SignupScreen({ navigation }) {
           leftIcon={<Icon name="email" color={colors.primary} size={20} />}
           autoCapitalize="none"
           keyboardType="email-address"
+          containerStyle={styles.inputContainer}
+          inputContainerStyle={styles.input}
+        />
+
+        <Input
+          placeholder="Phone Number"
+          value={formData.phoneNumber}
+          onChangeText={(text) => {
+            setFormData(prev => ({ ...prev, phoneNumber: text }));
+            setError('');
+          }}
+          leftIcon={<Icon name="phone" color={colors.primary} size={20} />}
+          keyboardType="phone-pad"
           containerStyle={styles.inputContainer}
           inputContainerStyle={styles.input}
         />
