@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Text, Dimensions, TouchableOpacity, SafeAreaView, StatusBar, Platform } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, Circle } from 'react-native-maps';
 import { SearchBar, Icon, Button, Card } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
 import Slider from '@react-native-community/slider';
 import { getDistance } from 'geolib';
-import Animated from 'react-native';
+import { websocketService } from '../../services/websocketService';
 
 // Using the same mock data from MainDashboardScreen
 const ALL_VENDORS = [
@@ -97,6 +97,8 @@ export default function FullMapScreen({ route, navigation }) {
   const [radiusKm, setRadiusKm] = useState(10);
   const [vendorsWithLocations, setVendorsWithLocations] = useState(nearbyVendors || []);
   const [filteredVendors, setFilteredVendors] = useState(nearbyVendors || []);
+  const [lastUpdateTime, setLastUpdateTime] = useState(null);
+  const markersRef = useRef({});
 
   // Initialize map and vendors when component mounts
   useEffect(() => {
@@ -123,6 +125,93 @@ export default function FullMapScreen({ route, navigation }) {
     }
   }, [userLocation, nearbyVendors, mapRef]);
 
+  // Handle WebSocket location updates
+  const handleLocationUpdate = (data) => {
+    console.log('Received location update:', data);
+    
+    if (!data.vendorId || !data.location) {
+      console.warn('Invalid location update data:', data);
+      return;
+    }
+
+    const updatedLocation = {
+      latitude: parseFloat(data.location.latitude),
+      longitude: parseFloat(data.location.longitude),
+      timestamp: data.timestamp || new Date().toISOString()
+    };
+
+    console.log('Processed location update:', {
+      vendorId: data.vendorId,
+      location: updatedLocation
+    });
+
+    // Update vendorsWithLocations
+    setVendorsWithLocations(prevVendors => {
+      const updatedVendors = prevVendors.map(vendor => {
+        if (String(vendor.id) === String(data.vendorId)) {
+          console.log('Updating vendor location:', {
+            vendorId: vendor.id,
+            oldLocation: vendor.location,
+            newLocation: updatedLocation
+          });
+          return {
+            ...vendor,
+            latitude: updatedLocation.latitude,
+            longitude: updatedLocation.longitude,
+            location: updatedLocation
+          };
+        }
+        return vendor;
+      });
+      return updatedVendors;
+    });
+
+    // Update filteredVendors
+    setFilteredVendors(prevVendors => {
+      const updatedVendors = prevVendors.map(vendor => {
+        if (String(vendor.id) === String(data.vendorId)) {
+          return {
+            ...vendor,
+            latitude: updatedLocation.latitude,
+            longitude: updatedLocation.longitude,
+            location: updatedLocation
+          };
+        }
+        return vendor;
+      });
+      return updatedVendors;
+    });
+
+    // Update map markers smoothly
+    if (mapRef) {
+      const marker = markersRef.current[data.vendorId];
+      if (marker) {
+        // Animate the marker to the new position
+        marker.animateMarkerToCoordinate({
+          latitude: updatedLocation.latitude,
+          longitude: updatedLocation.longitude
+        }, 500); // 500ms animation duration
+      }
+    }
+  };
+
+  // Connect to WebSocket when component mounts
+  useEffect(() => {
+    console.log('[FullMap] Setting up WebSocket connection');
+    const unsubscribe = websocketService.subscribe('location_update', handleLocationUpdate);
+    
+    // Register with WebSocket server
+    websocketService.send({
+      type: 'register',
+      vendorId: 'customer'
+    });
+
+    return () => {
+      console.log('[FullMap] Cleaning up WebSocket connection');
+      unsubscribe();
+    };
+  }, []);
+
   // Filter vendors based on radius and search
   const filterVendors = () => {
     if (!userLocation || !vendorsWithLocations.length) return;
@@ -135,23 +224,38 @@ export default function FullMapScreen({ route, navigation }) {
       );
       const isInRadius = distance <= radiusKm * 1000;
 
-      // Search filter
+      // Search filter with null checks
+      const searchLower = search.toLowerCase();
+      const vendorName = (vendor.name || '').toLowerCase();
+      const vendorCategory = (vendor.category || '').toLowerCase();
+      const vendorBusinessName = (vendor.business_name || '').toLowerCase();
+      const vendorAddress = (vendor.address || '').toLowerCase();
+
       const matchesSearch = !search || 
-        vendor.name.toLowerCase().includes(search.toLowerCase()) ||
-        vendor.category.toLowerCase().includes(search.toLowerCase());
+        vendorName.includes(searchLower) ||
+        vendorCategory.includes(searchLower) ||
+        vendorBusinessName.includes(searchLower) ||
+        vendorAddress.includes(searchLower);
 
       return isInRadius && matchesSearch;
     });
 
     setFilteredVendors(filtered);
+    setLastUpdateTime(new Date().toLocaleTimeString());
   };
 
   // Handle radius change
   const handleRadiusChange = (newRadius) => {
     setRadiusKm(newRadius);
+    filterVendors();
   };
 
-  // Handle radius apply
+  // Handle search change
+  const handleSearchChange = (text) => {
+    setSearch(text);
+    filterVendors();
+  };
+
   const handleRadiusApply = () => {
     filterVendors();
   };
@@ -195,10 +299,7 @@ export default function FullMapScreen({ route, navigation }) {
         <View style={styles.searchOverlay}>
           <SearchBar
             placeholder="Search vendors..."
-            onChangeText={(text) => {
-              setSearch(text);
-              filterVendors();
-            }}
+            onChangeText={handleSearchChange}
             value={search}
             containerStyle={styles.searchContainer}
             inputContainerStyle={styles.searchInputContainer}
@@ -238,6 +339,7 @@ export default function FullMapScreen({ route, navigation }) {
           initialRegion={region}
           showsUserLocation={true}
           showsMyLocationButton={false}
+          onRegionChangeComplete={setRegion}
         >
           {userLocation && (
             <Circle
@@ -251,20 +353,27 @@ export default function FullMapScreen({ route, navigation }) {
           {filteredVendors.map((vendor) => (
             <Marker
               key={vendor.id}
+              ref={ref => {
+                if (ref) {
+                  markersRef.current[vendor.id] = ref;
+                }
+              }}
               coordinate={{
                 latitude: vendor.latitude,
                 longitude: vendor.longitude,
               }}
               title={vendor.name}
               description={`${vendor.category} • ${vendor.rating}⭐`}
-              onPress={() => handleVendorPress(vendor)}
+              onPress={() => handleMarkerPress(vendor)}
+              anchor={{ x: 0.5, y: 1.0 }}
             >
               <View style={styles.markerContainer}>
                 <View style={[styles.marker, { backgroundColor: colors.white }]}>
                   <Icon 
                     name={getCategoryIcon(vendor.category)} 
-                    size={20} 
+                    size={18} 
                     color={colors.primary} 
+                    type="material"
                   />
                 </View>
                 <Text style={styles.markerLabel} numberOfLines={1}>
@@ -367,6 +476,9 @@ const styles = StyleSheet.create({
   },
   markerContainer: {
     alignItems: 'center',
+    width: 60,
+    marginLeft: -10,
+    marginBottom: -30,
   },
   badgeContainer: {
     position: 'absolute',
@@ -495,11 +607,15 @@ const styles = StyleSheet.create({
     height: 40,
   },
   marker: {
-    padding: 8,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 2,
     borderColor: colors.primary,
-    elevation: 3,
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -519,6 +635,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 1.41,
+    maxWidth: 60,
+    fontSize: 10,
   },
   myLocationButton: {
     position: 'absolute',

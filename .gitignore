@@ -31,6 +31,14 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
 
 # typescript
 *.tsbuildinfo
+
+# Backend specific
+FYP_Backend_Server/node_modules/
+FYP_Backend_Server/.env
+FYP_Backend_Server/logs/
+FYP_Backend_Server/dist/
+FYP_Backend_Server/build/
